@@ -22,9 +22,9 @@ BODY base:
   inertial offset:
     position: {x: 0.0009, y: -0.0002, z: 0.0599}
     orientation: {r: 0, p: 0, y: 0}
-  publish children names: false
-  publish joint names: false
-  publish joint positions: false
+  publish children names: true
+  publish joint names: true
+  publish joint positions: true
   friction: {rolling: 0.01, static: 0.5}
   restitution: 0.0
   damping: {angular: 0.95, linear: 0.95}
@@ -223,9 +223,14 @@ BODY Whiteboard:
   collision groups: []
   color components:
     ambient: {level: 1.0}
-    diffuse: {b: 1.0, g: 1.0, r: 1.0}
+    diffuse: {b: 1, g: 1.0, r: 1}
     specular: {b: 0.6402, g: 1.0, r: 0.9769}
     transparency: 1.0
+  # color components: # for greenboard
+  #   ambient: {level: 0.1}
+  #   diffuse: {b: 0.5, g: 1.0, r: 0.5}
+  #   specular: {b: 0.6402, g: 1.0, r: 0.9769}
+  #   transparency: 1.0
 JOINT base-link1:
   name: base-link1
   parent: BODY base
