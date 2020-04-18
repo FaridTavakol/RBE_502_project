@@ -67,9 +67,6 @@ class KukaController:
 		elif x[0] < xllim :
 			self.x_speed_local = self.X_SPEED
 
-		if x[1] > 0.55:
-			self.x_speed_local[1] = 3
-
 		x_des = x + self.x_speed_local * (self.dt)
 		velX_des = self.x_speed_local
 
