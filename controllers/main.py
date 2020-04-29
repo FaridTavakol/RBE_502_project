@@ -71,8 +71,8 @@ class KukaController:
 		x_des = x + self.x_speed_local * (self.dt)
 		velX_des = self.x_speed_local
 
-		print "x_speed_local : ", self.x_speed_local
-		print "velX_des", velX_des
+		# print "x_speed_local : ", self.x_speed_local
+		# print "velX_des", velX_des
 
 		return [x_des, velX_des]
 
@@ -87,11 +87,11 @@ class KukaController:
 
 		self.dt = self.t - self.prev_time
 		x_pos = get_end_effector_pos(self.state)
-		orientation = R.from_dcm(get_rot(self.state))
-		x_orientation = orientation.as_rotvec()
+		orientation = R.from_dcm(np.linalg.inv(get_rot(self.state)))
+		x_orientation = orientation.as_euler('zyx')
 		x = np.concatenate((x_pos,x_orientation))
 		# Get x as 6x1 vector including the orientation(rpy)
-		print "x = ", x
+		# print "x = ", x
 
 		# This should return a 6x1 position reference and 6x1 velocity reference
 		# angular velocity reference should be 0, whereas angular position reference
@@ -102,9 +102,12 @@ class KukaController:
 		XGoal = traj[0]
 		XGoal[0] = -0.1
 		XGoal[2] = 0.6
-		# XGoal[3] = x_orientation[0]
-		# XGoal[4] = x_orientation[1]
-		# XGoal[5] = x_orientation[2]
+		# XGoal[3] = np.pi
+		# XGoal[4] = np.pi/2
+		# XGoal[5] = np.pi
+		XGoal[3] = x_orientation[0]
+		XGoal[4] = x_orientation[1]
+		XGoal[5] = x_orientation[2]
 		XvelGoal = traj[1]
 		XaccGoal = 0*np.ones(6)
 
@@ -122,22 +125,23 @@ class KukaController:
 
 		# Get full Jacobian (Spatial?)
 		# J = get_end_effector_jacobian(self.state)
+		B = np.array([[1,0,np.sin(x_orientation[1])],[0,np.cos(x_orientation[0]),-np.cos(x_orientation[1])*np.sin(x_orientation[0])],[0,np.sin(x_orientation[0]),np.cos(x_orientation[1])*np.cos(x_orientation[0])]])
+		transform_B = np.zeros((6,6))
+		transform_B[0:3,0:3] = np.eye(3)
+		transform_B[3:,3:] = np.linalg.inv(B)
 		dummy_J = get_6_jacobian(self.state)
 		J_pos = dummy_J[3:]
 		J_orientation = dummy_J[0:3]
-		# J = np.concatenate((J_pos,J_orientation))
-		J = dummy_J
-		J_inv = np.linalg.pinv(J)
-		dJ = (J - self.prev_J)/self.dt
-		a = np.dot(J,vel)
-		print "a = ", a
-		print "compare = ", velX
+		J = np.concatenate((J_pos,J_orientation))
+		J_a = np.dot(transform_B,J)
+		J_inv = np.linalg.pinv(J_a)
+		dJ = (J_a - self.prev_J)/self.dt
 		Mq = get_M(self.state)
 
 		G = get_G(self.state)
 		C_qdot = get_C_qdot(self.state,vel)
-		tau = np.dot(Mq,np.dot(J_inv,(XaccGoal - np.dot(dJ,vel)))) + np.dot(C_qdot,vel) + G + np.dot(np.transpose(J),(np.dot(Kd,(XvelGoal - velX)) + np.dot(Kp,(XGoal - x))))
-
+		tau = np.dot(Mq,np.dot(J_inv,(XaccGoal - np.dot(dJ,vel)))) + np.dot(C_qdot,vel) + G + np.dot(np.transpose(J_a),(np.dot(Kd,(XvelGoal - velX)) + np.dot(Kp,(XGoal - x))))
+		print "tau =", tau
 		self.cmd_msg.joint_cmds = [tau[0],tau[1],tau[2],tau[3],tau[4],tau[5],tau[6]]
 		self.pub.publish(self.cmd_msg)
 
@@ -150,7 +154,7 @@ class KukaController:
 		self.prev_vel4 = self.prev_vel3
 		self.prev_wt_vel = wt_vel
 		self.prev_x = x
-		self.prev_J = J
+		self.prev_J = J_a
 
 	def impedance_controller_new(self):
 

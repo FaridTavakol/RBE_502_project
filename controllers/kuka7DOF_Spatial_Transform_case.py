@@ -200,8 +200,8 @@ def get_end_effector_jacobian(q):
 def get_6_jacobian(q):
     J = np.zeros([6,model.qdot_size])
     point_local = np.array([0.0, 0.0, 0.0])
-    # rbdl.CalcPointJacobian6D (model, q, body_7, point_local, J)
-    rbdl.CalcBodySpatialJacobian(model, q, body_7, point_local, J)
+    rbdl.CalcPointJacobian6D (model, q, body_7, point_local, J)
+    # rbdl.CalcBodySpatialJacobian(model, q, body_7, point_local, J)
     return J
 
 # print 'Point Location wrt base: ', COM_L3_base

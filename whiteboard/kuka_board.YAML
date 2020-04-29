@@ -279,7 +279,7 @@ JOINT link3-link4:
   child axis: {x: 0.0, y: 0.0, z: 1.0}
   child pivot: {x: 0.0, y: -0.0, z: -0.0}
   joint limits: {high: 2.094, low: -2.094}
-  controller: {P: 2000.0, I: 0, D: 4.0}
+  controller: {P: 200.0, I: 0, D: 4.0}
   detached: true
   type: revolute
   damping: 0.0
@@ -292,7 +292,7 @@ JOINT link4-link5:
   child axis: {x: 0.0, y: 0.0, z: 1.0}
   child pivot: {x: 0.0, y: -0.0, z: -0.0}
   joint limits: {high: 2.094, low: -2.094}
-  controller: {P: 2000.0, I: 0, D: 4.0}
+  controller: {P: 200.0, I: 0, D: 4.0}
   detached: true
   type: revolute
   damping: 0.0
@@ -305,7 +305,7 @@ JOINT link5-link6:
   child axis: {x: 0.0, y: 0.0, z: 1.0}
   child pivot: {x: 0.0, y: 0.0, z: -0.0}
   joint limits: {high: 2.094, low: -2.094}
-  controller: {P: 2000.0, I: 0, D: 4.0}
+  controller: {P: 50.0, I: 0, D: 1}
   detached: true
   type: revolute
   damping: 0.0
@@ -318,7 +318,7 @@ JOINT link6-link7:
   child axis: {x: 0.0, y: 0.0, z: 1.0}
   child pivot: {x: 0.0, y: 0.0, z: 0.0}
   joint limits: {high: 3.054, low: -3.054}
-  controller: {P: 2000.0, I: 0, D: 4.0}
+  controller: {P: 50.0, I: 0, D: 1}
   detached: true
   type: revolute
   damping: 0.0
