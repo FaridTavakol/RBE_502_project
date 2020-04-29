@@ -87,10 +87,12 @@ class KukaController:
 
 		self.dt = self.t - self.prev_time
 		x_pos = get_end_effector_pos(self.state)
+
 		orientation = R.from_dcm(np.linalg.inv(get_rot(self.state)))
-		x_orientation = orientation.as_euler('zyx')
-		x = np.concatenate((x_pos,x_orientation))
-		# Get x as 6x1 vector including the orientation(rpy)
+		x_orientation = orientation.as_euler('zyx') # finding d_phi
+		x = np.concatenate((x_pos,x_orientation)) # Forming the full position matrix [p, phi]
+
+		# Get state x as 6x1 vector including the orientation(rpy)
 		# print "x = ", x
 
 		# This should return a 6x1 position reference and 6x1 velocity reference
@@ -125,7 +127,7 @@ class KukaController:
 
 		# Get full Jacobian (Spatial?)
 		# J = get_end_effector_jacobian(self.state)
-		B = np.array([[1,0,np.sin(x_orientation[1])],[0,np.cos(x_orientation[0]),-np.cos(x_orientation[1])*np.sin(x_orientation[0])],[0,np.sin(x_orientation[0]),np.cos(x_orientation[1])*np.cos(x_orientation[0])]])
+		B = np.array([[1, 0, np.sin(x_orientation[1])] , [0, np.cos(x_orientation[0]), -np.cos(x_orientation[1]) * np.sin(x_orientation[0])] , [0, np.sin(x_orientation[0]), np.cos(x_orientation[1]) * np.cos(x_orientation[0])]])
 		transform_B = np.zeros((6,6))
 		transform_B[0:3,0:3] = np.eye(3)
 		transform_B[3:,3:] = np.linalg.inv(B)

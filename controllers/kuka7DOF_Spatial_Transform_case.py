@@ -76,33 +76,7 @@ trans6.r = parent_dist[6]
 trans7 = rbdl.SpatialTransform()
 trans7.E =np.array([[1.0, 0.0, 0.0],[0.0,0.0,+1.0],[0.0,-1.0,0.0]])
 trans7.r = parent_dist[7]
-# A=np.array([],[])
-# DH parameters
-# trans = rbdl.SpatialTransform()
-# trans.E = np.eye(3)#np.array([[0.0, -1.0, 0.0],[1.0,0.0,0.0],[0.0,0.0,1.0]])
-# trans.r = parent_dist[0]
-# trans1 = rbdl.SpatialTransform()
-# trans1.E =np.eye(3)
-# trans1.r = parent_dist[1]
-# trans2 = rbdl.SpatialTransform()
-# trans2.E = np.array([[1.0, 0.0, 0.0],[0.0,0.0,+1.0],[0.0,-1.0,0.0]])
-# trans2.r = parent_dist[2]
-# trans3 = rbdl.SpatialTransform()
-# trans3.E =np.array([[1.0, 0.0, 0.0],[0.0,0.0,-1.0],[0.0,+1.0,0.0]])
-# trans3.r = parent_dist[3]
-# trans4 = rbdl.SpatialTransform()
-# trans4.E =np.array([[1.0, 0.0, 0.0],[0.0,0.0,-1.0],[0.0,+1.0,0.0]])
-# trans4.r = parent_dist[4]
-# trans5 = rbdl.SpatialTransform()
-# trans5.E =np.array([[1.0, 0.0, 0.0],[0.0,0.0,+1.0],[0.0,-1.0,0.0]])
-# trans5.r = parent_dist[5]
-# trans6 = rbdl.SpatialTransform()
-# trans6.E =np.array([[1.0, 0.0, 0.0],[0.0,0.0,+1.0],[0.0,-1.0,0.0]])
-# trans6.r = parent_dist[6]
-# trans7 = rbdl.SpatialTransform()
-# trans7.E =np.array([[1.0, 0.0, 0.0],[0.0,0.0,-1.0],[0.0,+1.0,0.0]])
-# trans7.r = parent_dist[7]
-# Using principal inertia values from yaml file
+
 I_x = inertia[0][0]
 I_y = inertia[0][1]
 I_z = inertia[0][2]
@@ -131,8 +105,6 @@ I7_z = inertia[7][2]
 
 # Creation of inertia Matrix
 inertia_matrix=[[I_x, 0, 0], [0, I_y, 0], [0, 0, I_z]],[[I1_x, 0, 0], [0, I1_y, 0], [0, 0, I1_z]],[[I2_x, 0, 0], [0, I2_y, 0], [0, 0, I2_z]],[[I3_x, 0, 0], [0, I3_y, 0], [0, 0, I3_z]],[[I4_x, 0, 0], [0, I4_y, 0], [0, 0, I4_z]],[[I5_x, 0, 0], [0, I5_y, 0], [0, 0, I5_z]],[[I6_x, 0, 0], [0, I6_y, 0], [0, 0, I6_z]],[[I7_x, 0, 0], [0, I7_y, 0], [0, 0, I7_z]]
-# print 'inertia', inertia_matrix
-# print 'inertia', inertia_matrix[0][0]
 
 inertia_matrix = np.array(inertia_matrix)
 
@@ -157,12 +129,6 @@ body_5 = model.AppendBody(trans4, joint_rot_z, body4)
 body_6 = model.AppendBody(trans5, joint_rot_z, body5)
 body_7 = model.AppendBody(trans6, joint_rot_z, body6)
 body_8 = model.AppendBody(trans7, joint_rot_z, body7)
-
-# print 'joint_type', joint_rot_y
-# print 'model', model
-# print 'body', body_1
-# print 'Inertia', body.mInertia
-# print 'trans', trans
 
 q = np.zeros (model.q_size)
 qdot = np.zeros (model.qdot_size)
@@ -201,7 +167,6 @@ def get_6_jacobian(q):
     J = np.zeros([6,model.qdot_size])
     point_local = np.array([0.0, 0.0, 0.0])
     rbdl.CalcPointJacobian6D (model, q, body_7, point_local, J)
-    # rbdl.CalcBodySpatialJacobian(model, q, body_7, point_local, J)
     return J
 
 # print 'Point Location wrt base: ', COM_L3_base
@@ -292,9 +257,3 @@ def inverse_dynamics(q_,qdot_, qddot_):
     rbdl.InverseDynamics(model, q, qdot, qddot, tau)
     # print tau
     return tau
-
-# q = [0.1]*7
-# q[2]=0.5
-# # q = np.asarray(q)
-# Tau = get_G(q)
-# print(Tau)
