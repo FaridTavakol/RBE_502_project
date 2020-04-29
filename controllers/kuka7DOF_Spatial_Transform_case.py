@@ -10,7 +10,7 @@ def get_joint_num():
 # Create a body for a given mass, center of mass, and inertia at
 # the CoM
 mass_arr = [[1],[1],[1],[1],[1],[1],[1],[1]]#good
-mass_arr = np.array(mass_arr) 
+mass_arr = np.array(mass_arr)
 
 # Get the distance vector between two adjacent bodies
 # The location of the joints with respect to the previous links frame. These values are directly taken from the yaml file in Joints>parent pivot.
@@ -18,7 +18,7 @@ parent_dist = [[0.0,0.0,0.0],[0.0,0.0,0.103],[0.0,0.013,0.209],[0.0,-0.194,-0.00
 parent_dist = np.array(parent_dist)
 
 # create the COM for the bodies
-# In the yaml file the center of mass of each link is described in the local coordinate frame. However, the orientation and possibly the position 
+# In the yaml file the center of mass of each link is described in the local coordinate frame. However, the orientation and possibly the position
 # of that frame maybe different than the frame in which your link's joint frame is described in the RBDL. So, you have to find and define the COM w.r.t
 #the frame in which you described your model in the RBDL. The best way to do this is to open your model in the Blender software and campare your local frame
 # with the RBDL frame and find the corresponding values for the COM.
@@ -36,7 +36,7 @@ joint_rot_z = rbdl.Joint.fromJointType ("JointTypeRevoluteZ")
 joint_fixed= rbdl.Joint.fromJointType ("JointTypeFixed") #for the base and the first link
 # Function to get type of joint
 # J_type = [['JointTypeFixed']]
-# J_type = [['JointTypeRevoluteZ']] 
+# J_type = [['JointTypeRevoluteZ']]
 # J_type = np.array(J_type)
 
 
@@ -48,7 +48,7 @@ print 'com_pos', np.shape(com_pos)
 print 'parent_dist', np.shape(parent_dist)
 
 model = rbdl.Model()
-model.gravity=[0,0,-9.81] # defining the direction of the gravity in the z direction (the default direction is set in the negative Y direction) 
+model.gravity=[0,0,-9.81] # defining the direction of the gravity in the z direction (the default direction is set in the negative Y direction)
 # for i in range(Num_Bodies):
 
 # Creating of the transformation matrix between two adjacent bodies
@@ -185,11 +185,23 @@ def get_end_effector_pos(q):
     end_pos = rbdl.CalcBodyToBaseCoordinates(model, q, body_7, point_local)
     return end_pos
 
+def get_rot(q):
+    point_local = np.array([0.0, 0.0, 0.0])
+    end_rot = rbdl.CalcBodyWorldOrientation(model, q, body_7)
+    return end_rot
+
 def get_end_effector_jacobian(q):
     J = np.zeros([3,model.qdot_size])
     point_local = np.array([0.0, 0.0, 0.0])
     rbdl.CalcPointJacobian (model, q, body_7, point_local, J)
     # rbdl.CalcBodySpatialJacobian(model, q, body_7, J, True)
+    return J
+
+def get_6_jacobian(q):
+    J = np.zeros([6,model.qdot_size])
+    point_local = np.array([0.0, 0.0, 0.0])
+    # rbdl.CalcPointJacobian6D (model, q, body_7, point_local, J)
+    rbdl.CalcBodySpatialJacobian(model, q, body_7, point_local, J)
     return J
 
 # print 'Point Location wrt base: ', COM_L3_base
@@ -210,7 +222,7 @@ def get_G(q_):
     # print q
     qdot  = np.zeros(7)
     qddot = np.zeros(7)
-    tau   = np.zeros(7)   
+    tau   = np.zeros(7)
     # print "q is:    ",q*180/3.1457
     # RBDL inverse dynamics function
     # print 'current pos:', q*180/3.1457
@@ -221,7 +233,7 @@ def get_G(q_):
 def get_M(q_):
     q_ = np.asarray(q_)
     q = np.zeros(7)
-    
+
     M = np.zeros([7,7])
 
     q[0]=q_[0]
@@ -249,14 +261,14 @@ def get_C_qdot(q_, qdot_):
     # print q
     qdot  = qdot_
     qddot = np.zeros(7)
-    tau   = np.zeros(7)   
+    tau   = np.zeros(7)
     # print "q is:    ",q*180/3.1457
     # RBDL inverse dynamics function
     # print 'current pos:', q*180/3.1457
     rbdl.InverseDynamics(model, q, qdot, qddot, tau)
     G = get_G(q_)
     tau = np.copy(tau - G)
-    return tau    
+    return tau
 
 
 def inverse_dynamics(q_,qdot_, qddot_):
@@ -273,7 +285,7 @@ def inverse_dynamics(q_,qdot_, qddot_):
     # print q
     qdot  = qdot_
     qddot = qddot_
-    tau   = np.zeros(7)   
+    tau   = np.zeros(7)
     # print "q is:    ",q*180/3.1457
     # RBDL inverse dynamics function
     # print 'current pos:', q*180/3.1457
@@ -281,8 +293,8 @@ def inverse_dynamics(q_,qdot_, qddot_):
     # print tau
     return tau
 
-# q = [0.1]*7 
-# q[2]=0.5   
+# q = [0.1]*7
+# q[2]=0.5
 # # q = np.asarray(q)
 # Tau = get_G(q)
 # print(Tau)
