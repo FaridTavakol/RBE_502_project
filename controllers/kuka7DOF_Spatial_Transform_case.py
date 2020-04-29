@@ -280,9 +280,8 @@ def inverse_dynamics(q_,qdot_, qddot_):
     rbdl.InverseDynamics(model, q, qdot, qddot, tau)
     # print tau
     return tau
-
-# q = [0.1]*7 
-# q[2]=0.5   
-# # q = np.asarray(q)
-# Tau = get_G(q)
-# print(Tau)
+# new foundings in the RBDL: 
+#1. there is a function called CalcPointAcceleration() that can fing the acceleration of a point on a
+# body with respect to the world
+#2. calculate point velocity: this function computes the celocity of a point
+# on a body with respect to the world
