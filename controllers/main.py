@@ -59,31 +59,37 @@ class KukaController:
 		self.t = rospy.get_time() - self.t0 #clock
 		self.impedance_6d()
 
-	def generate_trajectory(self, x):
-		xllim = -0.6
-		xulim = -0.3
+	# def generate_trajectory(self, x):
+		# xllim = -0.6
+		# xulim = -0.3
 
-		if x[1] > xulim :
-			self.x_speed_local = -self.X_SPEED
-		elif x[1] < xllim :
-			self.x_speed_local = self.X_SPEED
+		# if x[1] > xulim :
+		# 	self.x_speed_local = -self.X_SPEED
+		# elif x[1] < xllim :
+		# 	self.x_speed_local = self.X_SPEED
 
-		x_des = x + self.x_speed_local * (self.dt)
-		velX_des = self.x_speed_local
+		# x_des = x + self.x_speed_local * (self.dt)
+		# velX_des = self.x_speed_local
 
-		# print "x_speed_local : ", self.x_speed_local
-		# print "velX_des", velX_des
+		# # print "x_speed_local : ", self.x_speed_local
+		# # print "velX_des", velX_des
+		# return [x_des, velX_des]
+
+	def generate_trajectory(self, x): # modified for set point tracking
+
+		x_des = np.array([-0.2, -0.3, 1, 0.2, 0.2, 0.2]) #desired state based on the cartesian position & rpy
+		velX_des = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0] # desired velocity
 
 		return [x_des, velX_des]
 
 	def impedance_6d(self):
 
-		Kp = 0.1*np.eye(6) #Stiffness Matrix
+		Kp = 0.0001*np.eye(6) #Stiffness Matrix
 		# Kp = np.diag([1,1,1,1,1,1])
 		# Kp[1][1] = 0
 		# Kp[2][2] = 0
 
-		Kd = 0.1*np.eye(6) # Damping Matrix
+		Kd = 0.0001*np.eye(6) # Damping Matrix
 
 		self.dt = self.t - self.prev_time
 		x_pos = get_end_effector_pos(self.state)
@@ -102,20 +108,18 @@ class KukaController:
 
 		# stateGoal = np.array([-0.08,-1.5, 0.07, -0.9, -2.07, 2.2, -0.8])
 		XGoal = traj[0]
-		XGoal[0] = -0.1
-		XGoal[2] = 0.6
+		# XGoal[0] = -0.1
+		# XGoal[2] = 0.6
 		# XGoal[3] = np.pi
 		# XGoal[4] = np.pi/2
 		# XGoal[5] = np.pi
-		XGoal[3] = x_orientation[0]
-		XGoal[4] = x_orientation[1]
-		XGoal[5] = x_orientation[2]
+		# XGoal[3] = x_orientation[0]
+		# XGoal[4] = x_orientation[1]
+		# XGoal[5] = x_orientation[2]
 		XvelGoal = traj[1]
-		XaccGoal = 0*np.ones(6)
+		XaccGoal = np.zeros(6)
 
 		# while loop stuff here
-
-
 		vel = (self.state - self.prev_state)/self.dt
 		wt_vel = (0.925*vel + 0.7192*self.prev_vel + 0.4108*self.prev_vel1+0.09*self.prev_vel2)/(0.4108+0.7192+0.925+0.09)
 		acc = (wt_vel - self.prev_wt_vel)/self.dt
@@ -132,18 +136,23 @@ class KukaController:
 		transform_B[0:3,0:3] = np.eye(3)
 		transform_B[3:,3:] = np.linalg.inv(B)
 		dummy_J = get_6_jacobian(self.state)
-		J_pos = dummy_J[3:]
-		J_orientation = dummy_J[0:3]
-		J = np.concatenate((J_pos,J_orientation))
-		J_a = np.dot(transform_B,J)
+
+		J = np.concatenate((dummy_J[3:] , dummy_J[0:3])) # analytic Jacobian
+		J_a = np.dot(transform_B, J)
 		J_inv = np.linalg.pinv(J_a)
-		dJ = (J_a - self.prev_J)/self.dt
+
+		dJ = (J_a - self.prev_J)/self.dt# 0000****
+
 		Mq = get_M(self.state)
 
 		G = get_G(self.state)
 		C_qdot = get_C_qdot(self.state,vel)
+		# The problem is most probably here. One thing
 		tau = np.dot(Mq,np.dot(J_inv,(XaccGoal - np.dot(dJ,vel)))) + np.dot(C_qdot,vel) + G + np.dot(np.transpose(J_a),(np.dot(Kd,(XvelGoal - velX)) + np.dot(Kp,(XGoal - x))))
-		print "tau =", tau
+		
+
+		# print "tau =", tau
+		print "x is =", x
 		self.cmd_msg.joint_cmds = [tau[0],tau[1],tau[2],tau[3],tau[4],tau[5],tau[6]]
 		self.pub.publish(self.cmd_msg)
 
