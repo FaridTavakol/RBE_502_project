@@ -77,24 +77,48 @@ class KukaController:
 
 	def generate_trajectory(self, x): # modified for set point tracking
 
-		x_des = np.array([-0.2, -0.3, 1, 0.2, 0.2, 0.2]) #desired state based on the cartesian position & rpy
+		# x_des = np.array([-0.2, -0.3, 0.5, 0.2, 0.2, 0.2]) #desired state based on the cartesian position & rpy
+		
+		x_des = np.array([0.25, -0.4, 0.5, 0.0 , 0.0, 0.0]) #desired state based on the cartesian position & rpy
 		velX_des = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0] # desired velocity
 
 		return [x_des, velX_des]
 
 	def impedance_6d(self):
+ 
+		# Kp = 3 * np.eye(6) #0.7Stiffness Matrix
+		
+		# # Kp[1][1] = 0.01
+		# Kp[3][3] = 0.0001
+		# Kp[4][4] = 0.00001
+		# Kp[5][5] = 0.000010
+		# # Kp = np.diag([1,1,1,1,1,1])
+		# # Kp[1][1] = 0
+		# # Kp[2][2] = 0
 
-		Kp = 0.0001*np.eye(6) #Stiffness Matrix
+		# Kd = 5 * np.eye(6) #25 Damping Matrix
+		# Kd[3][3] = 0.01
+		# Kd[4][4] = 0.010
+		# Kd[5][5] = 0.010
+		Kp = 1.20 * np.eye(6) #0.7Stiffness Matrix
+		
+		# Kp[1][1] = 0.01
+		Kp[3][3] = 0.0001
+		Kp[4][4] = 0.0001
+		Kp[5][5] = 0.00010
 		# Kp = np.diag([1,1,1,1,1,1])
 		# Kp[1][1] = 0
 		# Kp[2][2] = 0
 
-		Kd = 0.0001*np.eye(6) # Damping Matrix
+		Kd = 5 * np.eye(6) #25 Damping Matrix
+		Kd[3][3] = 0.01
+		Kd[4][4] = 0.010
+		Kd[5][5] = 0.010
 
 		self.dt = self.t - self.prev_time
 		x_pos = get_end_effector_pos(self.state)
 
-		orientation = R.from_dcm(np.linalg.inv(get_rot(self.state)))
+		orientation = R.from_dcm(np.linalg.inv(get_rot(self.state)))## change the inv to regular for get_rot maybe that is the problem
 		x_orientation = orientation.as_euler('zyx') # finding d_phi
 		x = np.concatenate((x_pos,x_orientation)) # Forming the full position matrix [p, phi]
 
@@ -149,10 +173,50 @@ class KukaController:
 		C_qdot = get_C_qdot(self.state,vel)
 		# The problem is most probably here. One thing
 		tau = np.dot(Mq,np.dot(J_inv,(XaccGoal - np.dot(dJ,vel)))) + np.dot(C_qdot,vel) + G + np.dot(np.transpose(J_a),(np.dot(Kd,(XvelGoal - velX)) + np.dot(Kp,(XGoal - x))))
+
 		
 
 		# print "tau =", tau
-		print "x is =", x
+		# print "x is =", x
+		# print "Err is = ", errX
+
+		if tau[0] > 0.5:
+			tau[0] = 0.5
+		if tau[0] < -0.5:
+			tau[0] = -0.5
+
+		if tau[1] > 20:
+			tau[1] = 20
+		if tau[1] < -20:
+			tau[1] = -20
+
+		if tau[2] > 10:
+			tau[2] = 10
+		if tau[2] < -10:
+			tau[2] = -10
+
+		if tau[3] > 2:
+			tau[3] = 2
+		if tau[3] < -2:
+			tau[3] = -2
+
+		if tau[4] > 1:
+			tau[4] = 1
+		if tau[4] < -1:
+			tau[4] = -1
+
+		if tau[5] > 0.5:
+			tau[5] = 0.5	
+		if tau[5] < -0.5:
+			tau[5] = -0.5				 
+
+		if tau[6] > 0.1:
+			tau[6] = 0.1
+		if tau[6] < -0.1:
+			tau[6] = -0.1	
+
+		print " Tau is :" , tau
+	
 		self.cmd_msg.joint_cmds = [tau[0],tau[1],tau[2],tau[3],tau[4],tau[5],tau[6]]
 		self.pub.publish(self.cmd_msg)
 
