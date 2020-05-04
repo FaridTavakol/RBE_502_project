@@ -9,7 +9,7 @@ def get_joint_num():
 
 # Create a body for a given mass, center of mass, and inertia at
 # the CoM
-mass_arr = [[1],[1],[1],[1],[1],[1],[1],[1]]#good
+mass_arr = [[1],[1],[1],[1],[1],[1],[1],[.1]]#good
 mass_arr = np.array(mass_arr)
 
 # Get the distance vector between two adjacent bodies
@@ -148,25 +148,25 @@ print("Size of q:",np.size(q))
 
 def get_end_effector_pos(q):
     point_local = np.array([0.0, 0.0, 0.0])
-    end_pos = rbdl.CalcBodyToBaseCoordinates(model, q, body_7, point_local)
+    end_pos = rbdl.CalcBodyToBaseCoordinates(model, q, body_8, point_local)
     return end_pos
 
 def get_rot(q):
     point_local = np.array([0.0, 0.0, 0.0])
-    end_rot = rbdl.CalcBodyWorldOrientation(model, q, body_7)
+    end_rot = rbdl.CalcBodyWorldOrientation(model, q, body_8)
     return end_rot
 
 def get_end_effector_jacobian(q):
     J = np.zeros([3,model.qdot_size])
     point_local = np.array([0.0, 0.0, 0.0])
-    rbdl.CalcPointJacobian (model, q, body_7, point_local, J)
+    rbdl.CalcPointJacobian (model, q, body_8, point_local, J)
     # rbdl.CalcBodySpatialJacobian(model, q, body_7, J, True)
     return J
 
 def get_6_jacobian(q):
     J = np.zeros([6,model.qdot_size])
     point_local = np.array([0.0, 0.0, 0.0])
-    rbdl.CalcPointJacobian6D (model, q, body_7, point_local, J)
+    rbdl.CalcPointJacobian6D (model, q, body_8, point_local, J)
     return J
 
 # print 'Point Location wrt base: ', COM_L3_base

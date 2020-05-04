@@ -181,7 +181,7 @@ BODY link6:
 BODY link7:
   name: link7
   mesh: link7.STL
-  mass: 1.0
+  mass: 0.1
   collision margin: 0.001
   scale: 1.0
   location:
@@ -242,7 +242,7 @@ JOINT base-link1:
   joint limits: {high: 2.094, low: -2.094}
   controller: {P: 1000.0, I: 0, D: 2.0}
   detached: true
-  type: revolute
+  type: continuous
   damping: 0.0
 JOINT link1-link2:
   name: link1-link2
@@ -255,7 +255,7 @@ JOINT link1-link2:
   joint limits: {high: 2.094, low: -2.094}
   controller: {P: 2000.0, I: 0, D: 4.0}
   detached: true
-  type: revolute
+  type: continuous
   damping: 0.0
 JOINT link2-link3:
   name: link2-link3
@@ -268,7 +268,7 @@ JOINT link2-link3:
   joint limits: {high: 2.094, low: -2.094}
   controller: {P: 2000.0, I: 0, D: 4.0}
   detached: true
-  type: revolute
+  type: continuous
   damping: 0.0
 JOINT link3-link4:
   name: link3-link4
@@ -281,7 +281,7 @@ JOINT link3-link4:
   joint limits: {high: 2.094, low: -2.094}
   controller: {P: 200.0, I: 0, D: 4.0}
   detached: true
-  type: revolute
+  type: continuous
   damping: 0.0
 JOINT link4-link5:
   name: link4-link5
@@ -294,7 +294,7 @@ JOINT link4-link5:
   joint limits: {high: 2.094, low: -2.094}
   controller: {P: 200.0, I: 0, D: 4.0}
   detached: true
-  type: revolute
+  type: continuous
   damping: 0.0
 JOINT link5-link6:
   name: link5-link6
@@ -307,7 +307,7 @@ JOINT link5-link6:
   joint limits: {high: 2.094, low: -2.094}
   controller: {P: 50.0, I: 0, D: 1}
   detached: true
-  type: revolute
+  type: continuous
   damping: 0.0
 JOINT link6-link7:
   name: link6-link7
@@ -320,5 +320,5 @@ JOINT link6-link7:
   joint limits: {high: 3.054, low: -3.054}
   controller: {P: 50.0, I: 0, D: 1}
   detached: true
-  type: revolute
+  type: fixed
   damping: 0.0

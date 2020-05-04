@@ -50,7 +50,7 @@ class KukaController:
 
 		# Set end-effector desired velocity here
 		self.X_SPEED = np.zeros(6)
-		self.X_SPEED[1] = 0.1
+		self.X_SPEED[1] = .3
 
 		self.x_speed_local = self.X_SPEED
 
@@ -59,30 +59,30 @@ class KukaController:
 		self.t = rospy.get_time() - self.t0 #clock
 		self.impedance_6d()
 
-	# def generate_trajectory(self, x):
-	# 	xllim = -0.6
-	# 	xulim = -0.3
+	def generate_trajectory(self, x):
+		xllim = -0.6
+		xulim = 0.2
 
-	# 	if x[1] > xulim :
-	# 		self.x_speed_local = -self.X_SPEED
-	# 	elif x[1] < xllim :
-	# 		self.x_speed_local = self.X_SPEED
+		if x[1] > xulim :
+			self.x_speed_local = -self.X_SPEED
+		elif x[1] < xllim :
+			self.x_speed_local = self.X_SPEED
 
-	# 	x_des = x + self.x_speed_local * (self.dt)
-	# 	velX_des = self.x_speed_local
+		x_des = x + self.x_speed_local * (self.dt)+0.03
+		velX_des = self.x_speed_local
 
-	# 	# print "x_speed_local : ", self.x_speed_local
-	# 	# print "velX_des", velX_des
-	# 	return [x_des, velX_des]
-
-	def generate_trajectory(self, x): # modified for set point tracking
-
-		# x_des = np.array([-0.2, -0.3, 0.5, 0.2, 0.2, 0.2]) #desired state based on the cartesian position & rpy
-		
-		x_des = np.array([0.25, -0.4, 0.5, 0.0 , 0.0, 0.0]) #desired state based on the cartesian position & rpy
-		velX_des = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0] # desired velocity
-
+		# print "x_speed_local : ", self.x_speed_local
+		# print "velX_des", velX_des
 		return [x_des, velX_des]
+
+	# def generate_trajectory(self, x): # modified for set point tracking
+
+	# 	# x_des = np.array([-0.2, -0.3, 0.5, 0.2, 0.2, 0.2]) #desired state based on the cartesian position & rpy
+		
+	# 	x_des = np.array([0.4, -0.4, 0.5, 3.14/2 , 0, 0]) #desired state based on the cartesian position & rpy
+	# 	velX_des = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0] # desired velocity
+
+	# 	return [x_des, velX_des]
 
 	def impedance_6d(self):
  
@@ -99,15 +99,19 @@ class KukaController:
 		# Kd[3][3] = 0.005
 		# Kd[4][4] = 0.0050
 		# Kd[5][5] = 0.0050
-		Kp = 5 * np.eye(6) #1.2 0.7Stiffness Matrix
+		Kp = 15 * np.eye(6) #1.2 0.7Stiffness Matrix
 		
-		# # Kp[1][1] = 0.01
-		Kp[3][3] = 0.0017
-		Kp[4][4] = 0.0017
-		Kp[5][5] = 0.0017
+		Kp[1][1] = 15
+		# Kp[3][3] = 0.0017
+		# Kp[4][4] = 0.0017
+		# Kp[5][5] = 0.0017
+		Kp[3][3] = 0.17
+		Kp[4][4] = 0.17
+		Kp[5][5] = 0.17
 
 
-		Kd = 15 * np.eye(6) #3.5-5  25 Damping Matrix
+
+		Kd = 5 * np.eye(6) #3.5-5  25 Damping Matrix
 		Kd[3][3] = 0.005
 		Kd[4][4] = 0.0050
 		Kd[5][5] = 0.0050
@@ -129,14 +133,14 @@ class KukaController:
 
 		# stateGoal = np.array([-0.08,-1.5, 0.07, -0.9, -2.07, 2.2, -0.8])
 		XGoal = traj[0]
-		# XGoal[0] = -0.1
-		# XGoal[2] = 0.6
+		XGoal[0] = 0.2
+		XGoal[2] = 0.6
 		# XGoal[3] = np.pi
 		# XGoal[4] = np.pi/2
 		# XGoal[5] = np.pi
-		# XGoal[3] = x_orientation[0]
-		# XGoal[4] = x_orientation[1]
-		# XGoal[5] = x_orientation[2]
+		XGoal[3] = 3.14/2
+		XGoal[4] = 0
+		XGoal[5] = 0
 		XvelGoal = traj[1]
 		XaccGoal = np.zeros(6)
 
@@ -180,8 +184,8 @@ class KukaController:
 
 		# print "tau =", tau
 		print "x is =", x
-		print "Err is = ", errX
-
+		# print "Err is = ", errX
+		print "X goal", XGoal
 		if tau[0] > 0.5:
 			tau[0] = 0.5
 		if tau[0] < -0.5:
