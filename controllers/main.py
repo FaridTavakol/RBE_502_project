@@ -60,20 +60,20 @@ class KukaController:
 		self.impedance_6d()
 
 	# def generate_trajectory(self, x):
-		# xllim = -0.6
-		# xulim = -0.3
+	# 	xllim = -0.6
+	# 	xulim = -0.3
 
-		# if x[1] > xulim :
-		# 	self.x_speed_local = -self.X_SPEED
-		# elif x[1] < xllim :
-		# 	self.x_speed_local = self.X_SPEED
+	# 	if x[1] > xulim :
+	# 		self.x_speed_local = -self.X_SPEED
+	# 	elif x[1] < xllim :
+	# 		self.x_speed_local = self.X_SPEED
 
-		# x_des = x + self.x_speed_local * (self.dt)
-		# velX_des = self.x_speed_local
+	# 	x_des = x + self.x_speed_local * (self.dt)
+	# 	velX_des = self.x_speed_local
 
-		# # print "x_speed_local : ", self.x_speed_local
-		# # print "velX_des", velX_des
-		# return [x_des, velX_des]
+	# 	# print "x_speed_local : ", self.x_speed_local
+	# 	# print "velX_des", velX_des
+	# 	return [x_des, velX_des]
 
 	def generate_trajectory(self, x): # modified for set point tracking
 
@@ -86,34 +86,31 @@ class KukaController:
 
 	def impedance_6d(self):
  
-		# Kp = 3 * np.eye(6) #0.7Stiffness Matrix
+
+		# Kp = 1.2 * np.eye(6) #1.2 0.7Stiffness Matrix
+		
+		# # # Kp[1][1] = 0.01
+		# Kp[3][3] = 0.0017
+		# Kp[4][4] = 0.0017
+		# Kp[5][5] = 0.0017
+
+
+		# Kd = 5 * np.eye(6) #3.5-5  25 Damping Matrix
+		# Kd[3][3] = 0.005
+		# Kd[4][4] = 0.0050
+		# Kd[5][5] = 0.0050
+		Kp = 5 * np.eye(6) #1.2 0.7Stiffness Matrix
 		
 		# # Kp[1][1] = 0.01
-		# Kp[3][3] = 0.0001
-		# Kp[4][4] = 0.00001
-		# Kp[5][5] = 0.000010
-		# # Kp = np.diag([1,1,1,1,1,1])
-		# # Kp[1][1] = 0
-		# # Kp[2][2] = 0
+		Kp[3][3] = 0.0017
+		Kp[4][4] = 0.0017
+		Kp[5][5] = 0.0017
 
-		# Kd = 5 * np.eye(6) #25 Damping Matrix
-		# Kd[3][3] = 0.01
-		# Kd[4][4] = 0.010
-		# Kd[5][5] = 0.010
-		Kp = 1.20 * np.eye(6) #0.7Stiffness Matrix
-		
-		# Kp[1][1] = 0.01
-		Kp[3][3] = 0.0001
-		Kp[4][4] = 0.0001
-		Kp[5][5] = 0.00010
-		# Kp = np.diag([1,1,1,1,1,1])
-		# Kp[1][1] = 0
-		# Kp[2][2] = 0
 
-		Kd = 5 * np.eye(6) #25 Damping Matrix
-		Kd[3][3] = 0.01
-		Kd[4][4] = 0.010
-		Kd[5][5] = 0.010
+		Kd = 15 * np.eye(6) #3.5-5  25 Damping Matrix
+		Kd[3][3] = 0.005
+		Kd[4][4] = 0.0050
+		Kd[5][5] = 0.0050
 
 		self.dt = self.t - self.prev_time
 		x_pos = get_end_effector_pos(self.state)
@@ -162,60 +159,65 @@ class KukaController:
 		dummy_J = get_6_jacobian(self.state)
 
 		J = np.concatenate((dummy_J[3:] , dummy_J[0:3])) # analytic Jacobian
-		J_a = np.dot(transform_B, J)
-		J_inv = np.linalg.pinv(J_a)
+		# J_a = np.dot(transform_B, J)
 
-		dJ = (J_a - self.prev_J)/self.dt# 0000****
+		# J_inv = np.linalg.pinv(J_a)
+		J_inv = np.linalg.pinv(J)
+
+
+		# dJ = (J_a - self.prev_J)/self.dt# 0000****
+		dJ = (J - self.prev_J)/self.dt# 0000****
 
 		Mq = get_M(self.state)
 
 		G = get_G(self.state)
 		C_qdot = get_C_qdot(self.state,vel)
 		# The problem is most probably here. One thing
-		tau = np.dot(Mq,np.dot(J_inv,(XaccGoal - np.dot(dJ,vel)))) + np.dot(C_qdot,vel) + G + np.dot(np.transpose(J_a),(np.dot(Kd,(XvelGoal - velX)) + np.dot(Kp,(XGoal - x))))
+		# tau = np.dot(Mq,np.dot(J_inv,(XaccGoal - np.dot(dJ,vel)))) + np.dot(C_qdot,vel) + G + np.dot(np.transpose(J_a),(np.dot(Kd,(XvelGoal - velX)) + np.dot(Kp,(XGoal - x))))
+		tau = np.dot(Mq,np.dot(J_inv,(XaccGoal - np.dot(dJ,vel)))) + np.dot(C_qdot,vel) + G + np.dot(np.transpose(J),(np.dot(Kd,(XvelGoal - velX)) + np.dot(Kp,(XGoal - x))))
 
 		
 
 		# print "tau =", tau
-		# print "x is =", x
-		# print "Err is = ", errX
+		print "x is =", x
+		print "Err is = ", errX
 
 		if tau[0] > 0.5:
 			tau[0] = 0.5
 		if tau[0] < -0.5:
 			tau[0] = -0.5
 
-		if tau[1] > 20:
-			tau[1] = 20
-		if tau[1] < -20:
-			tau[1] = -20
+		if tau[1] > 22:
+			tau[1] = 22
+		if tau[1] < -22:
+			tau[1] = -22
 
 		if tau[2] > 10:
 			tau[2] = 10
 		if tau[2] < -10:
 			tau[2] = -10
 
-		if tau[3] > 2:
-			tau[3] = 2
-		if tau[3] < -2:
-			tau[3] = -2
+		if tau[3] > 3:
+			tau[3] = 3
+		if tau[3] < -3:
+			tau[3] = -3
 
-		if tau[4] > 1:
-			tau[4] = 1
-		if tau[4] < -1:
-			tau[4] = -1
+		if tau[4] > 0.3:
+			tau[4] = 0.3
+		if tau[4] < -0.3:
+			tau[4] = -0.3
 
-		if tau[5] > 0.5:
-			tau[5] = 0.5	
-		if tau[5] < -0.5:
-			tau[5] = -0.5				 
+		if tau[5] > 0.2:
+			tau[5] = 0.2	
+		if tau[5] < -0.2:
+			tau[5] = -0.2				 
 
 		if tau[6] > 0.1:
 			tau[6] = 0.1
 		if tau[6] < -0.1:
 			tau[6] = -0.1	
 
-		print " Tau is :" , tau
+		# print " Tau is :" , tau
 	
 		self.cmd_msg.joint_cmds = [tau[0],tau[1],tau[2],tau[3],tau[4],tau[5],tau[6]]
 		self.pub.publish(self.cmd_msg)
@@ -229,7 +231,8 @@ class KukaController:
 		self.prev_vel4 = self.prev_vel3
 		self.prev_wt_vel = wt_vel
 		self.prev_x = x
-		self.prev_J = J_a
+		# self.prev_J = J_a
+		self.prev_J = J
 
 	def impedance_controller_new(self):
 
