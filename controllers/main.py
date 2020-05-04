@@ -42,7 +42,11 @@ class KukaController:
 		self.prev_vel3 = np.zeros(self.NJoints)
 		self.prev_vel4 = np.zeros(self.NJoints)
 		self.prev_wt_vel = np.zeros(self.NJoints)
-		self.prev_J = np.zeros((6,self.NJoints))
+		# Jacobian 6x7
+		# self.prev_J = np.zeros((6,self.NJoints))
+		# Jacobian 6x6
+		self.prev_J = np.zeros((6,self.NJoints-1))
+
 
 		## Task Space
 		self.prev_x = np.zeros(6)
@@ -78,17 +82,17 @@ class KukaController:
 	# def generate_trajectory(self, x): # modified for set point tracking
 
 	# 	# x_des = np.array([-0.2, -0.3, 0.5, 0.2, 0.2, 0.2]) #desired state based on the cartesian position & rpy
-		
+
 	# 	x_des = np.array([0.4, -0.4, 0.5, 3.14/2 , 0, 0]) #desired state based on the cartesian position & rpy
 	# 	velX_des = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0] # desired velocity
 
 	# 	return [x_des, velX_des]
 
 	def impedance_6d(self):
- 
+
 
 		# Kp = 1.2 * np.eye(6) #1.2 0.7Stiffness Matrix
-		
+
 		# # # Kp[1][1] = 0.01
 		# Kp[3][3] = 0.0017
 		# Kp[4][4] = 0.0017
@@ -100,7 +104,7 @@ class KukaController:
 		# Kd[4][4] = 0.0050
 		# Kd[5][5] = 0.0050
 		Kp = 15 * np.eye(6) #1.2 0.7Stiffness Matrix
-		
+
 		Kp[1][1] = 15
 		# Kp[3][3] = 0.0017
 		# Kp[4][4] = 0.0017
@@ -146,8 +150,10 @@ class KukaController:
 
 		# while loop stuff here
 		vel = (self.state - self.prev_state)/self.dt
-		wt_vel = (0.925*vel + 0.7192*self.prev_vel + 0.4108*self.prev_vel1+0.09*self.prev_vel2)/(0.4108+0.7192+0.925+0.09)
-		acc = (wt_vel - self.prev_wt_vel)/self.dt
+		# For 6x6 Jacobian:
+		vel = vel[:6]
+		# wt_vel = (0.925*vel + 0.7192*self.prev_vel + 0.4108*self.prev_vel1+0.09*self.prev_vel2)/(0.4108+0.7192+0.925+0.09)
+		# acc = (wt_vel - self.prev_wt_vel)/self.dt
 
 		velX = (x - self.prev_x)/self.dt
 
@@ -165,22 +171,37 @@ class KukaController:
 		J = np.concatenate((dummy_J[3:] , dummy_J[0:3])) # analytic Jacobian
 		# J_a = np.dot(transform_B, J)
 
+		# Jacobian 6x6:
+		J = J[:,:6]
+
 		# J_inv = np.linalg.pinv(J_a)
-		J_inv = np.linalg.pinv(J)
+		# J_inv = np.linalg.pinv(J)
+		# Jacobian inverse 6x6 (true inverse):
+		J_inv = np.linalg.inv(J)
 
 
 		# dJ = (J_a - self.prev_J)/self.dt# 0000****
 		dJ = (J - self.prev_J)/self.dt# 0000****
 
 		Mq = get_M(self.state)
+		# For 6x6 Jacobian:
+		Mq = Mq[:6,:6]
 
 		G = get_G(self.state)
+		# For 6x6 Jacobian:
+		G = G[:6]
 		C_qdot = get_C_qdot(self.state,vel)
+		# For 6x6 Jacobian:
+		C_qdot = C_qdot[:6]
 		# The problem is most probably here. One thing
 		# tau = np.dot(Mq,np.dot(J_inv,(XaccGoal - np.dot(dJ,vel)))) + np.dot(C_qdot,vel) + G + np.dot(np.transpose(J_a),(np.dot(Kd,(XvelGoal - velX)) + np.dot(Kp,(XGoal - x))))
-		tau = np.dot(Mq,np.dot(J_inv,(XaccGoal - np.dot(dJ,vel)))) + np.dot(C_qdot,vel) + G + np.dot(np.transpose(J),(np.dot(Kd,(XvelGoal - velX)) + np.dot(Kp,(XGoal - x))))
+		# For 6x7 Jacobian
+		# tau = np.dot(Mq,np.dot(J_inv,(XaccGoal - np.dot(dJ,vel)))) + np.dot(C_qdot,vel) + G + np.dot(np.transpose(J),(np.dot(Kd,(XvelGoal - velX)) + np.dot(Kp,(XGoal - x))))
 
-		
+		# For 6x6 Jacobian
+		tau = np.zeros(7)
+		tau[0:6] = np.dot(Mq,np.dot(J_inv,(XaccGoal - np.dot(dJ,vel)))) + np.dot(C_qdot,vel) + G + np.dot(np.transpose(J),(np.dot(Kd,(XvelGoal - velX)) + np.dot(Kp,(XGoal - x))))
+
 
 		# print "tau =", tau
 		print "x is =", x
@@ -212,28 +233,28 @@ class KukaController:
 			tau[4] = -0.3
 
 		if tau[5] > 0.2:
-			tau[5] = 0.2	
+			tau[5] = 0.2
 		if tau[5] < -0.2:
-			tau[5] = -0.2				 
+			tau[5] = -0.2
 
 		if tau[6] > 0.1:
 			tau[6] = 0.1
 		if tau[6] < -0.1:
-			tau[6] = -0.1	
+			tau[6] = -0.1
 
 		# print " Tau is :" , tau
-	
+
 		self.cmd_msg.joint_cmds = [tau[0],tau[1],tau[2],tau[3],tau[4],tau[5],tau[6]]
 		self.pub.publish(self.cmd_msg)
 
 		self.prev_time = self.t
 		self.prev_state = self.state
 		self.prev_vel = vel
-		self.prev_vel1 = self.prev_vel
-		self.prev_vel2 = self.prev_vel1
-		self.prev_vel3 = self.prev_vel2
-		self.prev_vel4 = self.prev_vel3
-		self.prev_wt_vel = wt_vel
+		# self.prev_vel1 = self.prev_vel
+		# self.prev_vel2 = self.prev_vel1
+		# self.prev_vel3 = self.prev_vel2
+		# self.prev_vel4 = self.prev_vel3
+		# self.prev_wt_vel = wt_vel
 		self.prev_x = x
 		# self.prev_J = J_a
 		self.prev_J = J
