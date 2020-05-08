@@ -320,5 +320,5 @@ JOINT link6-link7:
   joint limits: {high: 3.054, low: -3.054}
   controller: {P: 50.0, I: 0, D: 1}
   detached: true
-  type: fixed
+  type: continuous
   damping: 0.0

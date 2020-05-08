@@ -16,6 +16,11 @@ from kuka7DOF_Spatial_Transform_case import *
 
 import numpy as np
 
+def skew(vector):
+	return np.array([[0, -vector[2], vector[1]],
+                     [vector[2], 0, -vector[0]],
+                     [-vector[1], vector[0], 0]])
+
 class KukaController:
 
 	def __init__(self):
@@ -43,9 +48,9 @@ class KukaController:
 		self.prev_vel4 = np.zeros(self.NJoints)
 		self.prev_wt_vel = np.zeros(self.NJoints)
 		# Jacobian 6x7
-		# self.prev_J = np.zeros((6,self.NJoints))
+		self.prev_J = np.zeros((6,self.NJoints))
 		# Jacobian 6x6
-		self.prev_J = np.zeros((6,self.NJoints-1))
+		# self.prev_J = np.zeros((6,self.NJoints-1))
 
 
 		## Task Space
@@ -61,7 +66,7 @@ class KukaController:
 	def getJointState(self, data):
 		self.state = np.asarray(data.joint_positions)
 		self.t = rospy.get_time() - self.t0 #clock
-		self.impedance_6d()
+		self.pid_controller()
 
 	def generate_trajectory(self, x):
 		xllim = -0.6
@@ -87,6 +92,204 @@ class KukaController:
 	# 	velX_des = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0] # desired velocity
 
 	# 	return [x_des, velX_des]
+
+	def pid_controller(self):
+
+
+		# Kp = 1.2 * np.eye(6) #1.2 0.7Stiffness Matrix
+
+		# # # Kp[1][1] = 0.01
+		# Kp[3][3] = 0.0017
+		# Kp[4][4] = 0.0017
+		# Kp[5][5] = 0.0017
+
+
+		# Kd = 5 * np.eye(6) #3.5-5  25 Damping Matrix
+		# Kd[3][3] = 0.005
+		# Kd[4][4] = 0.0050
+		# Kd[5][5] = 0.0050
+		Kp = 1 * np.eye(6) #1.2 0.7Stiffness Matrix
+
+		# Kp[1][1] = 15
+		# Kp[3][3] = 0.0017
+		# Kp[4][4] = 0.0017
+		# Kp[5][5] = 0.0017
+		Kp[3][3] = 50
+		Kp[4][4] = 50
+		Kp[5][5] = 50
+
+
+
+		Kd = 5 * np.eye(6) #3.5-5  25 Damping Matrix
+		# Kd[3][3] = 0.005
+		# Kd[4][4] = 0.0050
+		# Kd[5][5] = 0.0050
+
+		self.dt = self.t - self.prev_time
+		x_pos = get_end_effector_pos(self.state)
+
+		orientation = R.from_dcm(np.linalg.inv(get_rot(self.state)))## change the inv to regular for get_rot maybe that is the problem
+		x_orientation = orientation.as_euler('zyx') # finding d_phi
+		x = np.concatenate((x_pos,x_orientation)) # Forming the full position matrix [p, phi]
+
+		Re = np.linalg.inv(get_rot(self.state))
+		ne = Re[:,0]
+		se = Re[:,1]
+		ae = Re[:,2]
+		print "z:",ae
+		Red = np.array([[1,0,0],[0,0,-1],[0,1,0]])
+		ned = Red[:,0]
+		sed = Red[:,1]
+		aed = Red[:,2]
+		print "zd:",aed
+		eo = 0.5*(np.cross(ne,ned)+np.cross(se,sed)+np.cross(ae,aed))
+		L = -0.5*(np.matmul(skew(ned),skew(ne))+np.matmul(skew(sed),skew(se))+np.matmul(skew(aed),skew(ae)))
+		# Get state x as 6x1 vector including the orientation(rpy)
+		# print "x = ", x
+
+		# This should return a 6x1 position reference and 6x1 velocity reference
+		# angular velocity reference should be 0, whereas angular position reference
+		# should reflect the desire orientation for writing task
+		traj = self.generate_trajectory(x)
+
+		# stateGoal = np.array([-0.08,-1.5, 0.07, -0.9, -2.07, 2.2, -0.8])
+		XGoal = traj[0]
+		XGoal[0] = 0.2
+		XGoal[1] = -0.2
+		XGoal[2] = 0.6
+		# XGoal[3] = np.pi
+		# XGoal[4] = np.pi/2
+		# XGoal[5] = np.pi
+		XGoal[3] = 3.14/2
+		XGoal[4] = 0
+		XGoal[5] = 0
+		XvelGoal = traj[1]
+		XvelGoal = np.zeros(6)
+		XaccGoal = np.zeros(6)
+
+		# while loop stuff here
+		vel = (self.state - self.prev_state)/self.dt
+		# For 6x6 Jacobian:
+		# vel = vel[:6]
+		# wt_vel = (0.925*vel + 0.7192*self.prev_vel + 0.4108*self.prev_vel1+0.09*self.prev_vel2)/(0.4108+0.7192+0.925+0.09)
+		# acc = (wt_vel - self.prev_wt_vel)/self.dt
+
+		velX = (x - self.prev_x)/self.dt
+
+		errX = np.asarray(XGoal - x)
+		derrX = XvelGoal - velX
+
+		# Get full Jacobian (Spatial?)
+		# J = get_end_effector_jacobian(self.state)
+		B = np.array([[1, 0, np.sin(x_orientation[1])] , [0, np.cos(x_orientation[0]), -np.cos(x_orientation[1]) * np.sin(x_orientation[0])] , [0, np.sin(x_orientation[0]), np.cos(x_orientation[1]) * np.cos(x_orientation[0])]])
+		transform_B = np.zeros((6,6))
+		transform_B[0:3,0:3] = np.eye(3)
+		transform_B[3:,3:] = np.linalg.inv(np.transpose(B))
+		dummy_J = get_6_jacobian(self.state)
+
+		J = np.concatenate((dummy_J[3:] , dummy_J[0:3])) # analytic Jacobian
+		# J = np.dot(transform_B, J)
+		omega = np.matmul(J,vel)[3:]
+		deo = -np.matmul(L,omega)
+		xd = np.array([0.2, -0.2, 0.5])
+		dxd = np.zeros(3)
+		ex = x_pos-xd
+		dex = velX[:3] - dxd
+		e = np.concatenate((ex,eo))
+		de = np.concatenate((dex,deo))
+		# print "e:",e
+		# Jacobian 6x6:
+		# J = J[:,:6]
+
+		# J_inv = np.linalg.pinv(J_a)
+		J_inv = np.linalg.pinv(J)
+		# Jacobian inverse 6x6 (true inverse):
+		# J_inv = np.linalg.inv(J)
+
+
+		# dJ = (J_a - self.prev_J)/self.dt# 0000****
+		dJ = (J - self.prev_J)/self.dt# 0000****
+
+		Mq = get_M(self.state)
+		# For 6x6 Jacobian:
+		Mq = Mq[:6,:6]
+
+		G = get_G(self.state)
+		# For 6x6 Jacobian:
+		G = G[:6]
+		C_qdot = get_C_qdot(self.state,vel)
+		# For 6x6 Jacobian:
+		C_qdot = C_qdot[:6]
+		# The problem is most probably here. One thing
+		# tau = np.dot(Mq,np.dot(J_inv,(XaccGoal - np.dot(dJ,vel)))) + np.dot(C_qdot,vel) + G + np.dot(np.transpose(J_a),(np.dot(Kd,(XvelGoal - velX)) + np.dot(Kp,(XGoal - x))))
+		# For 6x7 Jacobian
+		# tau = np.dot(Mq,np.dot(J_inv,(XaccGoal - np.dot(dJ,vel)))) + np.dot(C_qdot,vel) + G + np.dot(np.transpose(J),(np.dot(Kd,(XvelGoal - velX)) + np.dot(Kp,(XGoal - x))))
+
+		ddx = XaccGoal - np.matmul(Kp,e) - np.matmul(Kd,de)
+		aq = np.matmul(J_inv,(ddx-np.matmul(dJ,vel)))
+		# q = self.state[:6]
+		# tau = np.zeros(7)
+		tau = inverse_dynamics(self.state, vel, aq)
+		# For 6x6 Jacobian
+		# tau = np.zeros(7)
+		# tau[0:6] = -np.matmul(np.transpose(J),np.matmul(Kp,(x-XGoal))) - np.matmul(np.transpose(J),np.matmul(Kd,np.matmul(J,vel))) + G
+
+
+		# print "tau =", tau
+		# print "x is =", x
+		# print "Err is = ", errX
+		# print "X goal", XGoal
+		# if tau[0] > 0.5:
+		# 	tau[0] = 0.5
+		# if tau[0] < -0.5:
+		# 	tau[0] = -0.5
+		#
+		# if tau[1] > 30:
+		# 	tau[1] = 30
+		# if tau[1] < -30:
+		# 	tau[1] = -30
+		#
+		# if tau[2] > 10:
+		# 	tau[2] = 10
+		# if tau[2] < -10:
+		# 	tau[2] = -10
+		#
+		# if tau[3] > 3:
+		# 	tau[3] = 3
+		# if tau[3] < -3:
+		# 	tau[3] = -3
+		#
+		# if tau[4] > 0.3:
+		# 	tau[4] = 0.3
+		# if tau[4] < -0.3:
+		# 	tau[4] = -0.3
+		#
+		# if tau[5] > 0.2:
+		# 	tau[5] = 0.2
+		# if tau[5] < -0.2:
+		# 	tau[5] = -0.2
+		#
+		# if tau[6] > 0.1:
+		# 	tau[6] = 0.1
+		# if tau[6] < -0.1:
+		# 	tau[6] = -0.1
+
+		# print " Tau is :" , tau
+
+		self.cmd_msg.joint_cmds = [tau[0],tau[1],tau[2],tau[3],tau[4],tau[5],tau[6]]
+		self.pub.publish(self.cmd_msg)
+
+		self.prev_time = self.t
+		self.prev_state = self.state
+		self.prev_vel = vel
+		# self.prev_vel1 = self.prev_vel
+		# self.prev_vel2 = self.prev_vel1
+		# self.prev_vel3 = self.prev_vel2
+		# self.prev_vel4 = self.prev_vel3
+		# self.prev_wt_vel = wt_vel
+		self.prev_x = x
+		# self.prev_J = J_a
+		self.prev_J = J
 
 	def impedance_6d(self):
 
@@ -165,11 +368,11 @@ class KukaController:
 		B = np.array([[1, 0, np.sin(x_orientation[1])] , [0, np.cos(x_orientation[0]), -np.cos(x_orientation[1]) * np.sin(x_orientation[0])] , [0, np.sin(x_orientation[0]), np.cos(x_orientation[1]) * np.cos(x_orientation[0])]])
 		transform_B = np.zeros((6,6))
 		transform_B[0:3,0:3] = np.eye(3)
-		transform_B[3:,3:] = np.linalg.inv(B)
+		transform_B[3:,3:] = np.linalg.inv(np.transpose(B))
 		dummy_J = get_6_jacobian(self.state)
 
 		J = np.concatenate((dummy_J[3:] , dummy_J[0:3])) # analytic Jacobian
-		# J_a = np.dot(transform_B, J)
+		J = np.dot(transform_B, J)
 
 		# Jacobian 6x6:
 		J = J[:,:6]
@@ -212,10 +415,10 @@ class KukaController:
 		if tau[0] < -0.5:
 			tau[0] = -0.5
 
-		if tau[1] > 22:
-			tau[1] = 22
-		if tau[1] < -22:
-			tau[1] = -22
+		if tau[1] > 30:
+			tau[1] = 30
+		if tau[1] < -30:
+			tau[1] = -30
 
 		if tau[2] > 10:
 			tau[2] = 10
