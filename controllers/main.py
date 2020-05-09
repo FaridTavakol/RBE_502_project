@@ -45,15 +45,15 @@ class KukaController:
 		# Jacobian 6x7
 		# self.prev_J = np.zeros((6,self.NJoints))
 		# Jacobian 6x6
-		self.prev_J = np.zeros((6,self.NJoints-1))
+		self.prev_J = np.zeros((3,5))
 
 
 		## Task Space
-		self.prev_x = np.zeros(6)
-		self.prev_velX = np.zeros(6)
+		self.prev_x = np.zeros(3)
+		self.prev_velX = np.zeros(3)
 
 		# Set end-effector desired velocity here
-		self.X_SPEED = np.zeros(6)
+		self.X_SPEED = np.zeros(3)
 		self.X_SPEED[1] = .3
 
 		self.x_speed_local = self.X_SPEED
@@ -62,7 +62,7 @@ class KukaController:
 		self.state = np.asarray(data.joint_positions)
 		self.t = rospy.get_time() - self.t0 #clock
 		# self.impedance_6d()
-		self.pointcontrol_w_GravCompensation()
+		self.reduced_ctrl()
 
 	def generate_trajectory(self, x):
 		xllim = -0.6
@@ -88,6 +88,60 @@ class KukaController:
 	# 	velX_des = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0] # desired velocity
 
 	# 	return [x_des, velX_des]
+
+	def reduced_ctrl(self):
+
+		# Controller gains 3x3 for position control only
+		Kp = 1 * np.eye(3)
+		Kd = 0.1 * np.eye(3)
+
+		self.dt = self.t - self.prev_time
+
+		# Reduced state -> first 5 joints
+		reduced_state = self.state[:5]
+		# Position of the end of the link5
+		x = get_5_pos(reduced_state)
+
+		# Desired position, velocity, acceleration
+		XGoal = np.array([-0.1, -0.2, 0.3])
+		XvelGoal = np.zeros(3)
+		XaccGoal = np.zeros(3)
+
+		# q_dot -> for 5 joints only
+		vel = (self.state - self.prev_state)/self.dt
+		vel = vel[:5]
+
+		# Task space velocity -> linear velocity of the end of the link5
+		velX = (x - self.prev_x)/self.dt
+
+		# error variables
+		errX = XGoal - x
+		derrX = XvelGoal - velX
+		print "error:",errX
+
+		# Jacobian 3x5 -> 3 position, 5 joints
+		J = get_end_effector_jacobian(self.state)
+		J = J[:,:5]
+		J_inv = np.linalg.pinv(J)
+		dJ = (J - self.prev_J)/self.dt
+
+		# Reduce dynamic parameters for 5 joints
+		Mq = get_M(self.state)
+		G = get_G(self.state)
+		C_qdot = get_C_qdot(self.state,vel)
+		Mq = Mq[:5,:5]
+		G = G[:5]
+		C_qdot = C_qdot[:5]
+
+		tau = np.zeros(7)
+		tau[:5] = np.dot(Mq,np.dot(J_inv,(XaccGoal - np.dot(dJ,vel)))) + np.dot(C_qdot,vel) + G + np.dot(np.transpose(J),(np.dot(Kd,derrX) + np.dot(Kp,errX)))
+		self.cmd_msg.joint_cmds = [tau[0],tau[1],tau[2],tau[3],tau[4],tau[5],tau[6]]
+		self.pub.publish(self.cmd_msg)
+
+		self.prev_time = self.t
+		self.prev_state = self.state
+		self.prev_x = x
+		self.prev_J = J
 
 	def impedance_6d(self):
 
@@ -427,8 +481,6 @@ class KukaController:
 		self.prev_vel3 = self.prev_vel2
 		self.prev_vel4 = self.prev_vel3
 		self.prev_wt_vel = wt_vel
-
-
 
 	def CTC_task_controller(self):
 

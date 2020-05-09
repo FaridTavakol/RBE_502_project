@@ -152,6 +152,11 @@ def get_end_effector_pos(q):
     end_pos = rbdl.CalcBodyToBaseCoordinates(model, q, body_8, point_local)
     return end_pos
 
+def get_5_pos(q):
+    point_local = np.array([0.0, 0.0, 0.0])
+    pos_5 = rbdl.CalcBodyToBaseCoordinates(model, q, body_6, point_local)
+    return pos_5
+
 def get_rot(q):
     point_local = np.array([0.0, 0.0, 0.0])
     end_rot = rbdl.CalcBodyWorldOrientation(model, q, body_8)
