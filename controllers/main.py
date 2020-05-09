@@ -36,6 +36,13 @@ class KukaController:
 
 		## Joint Space
 		self.prev_state_PD = np.zeros(4) #the last 4 joints are controller using PID
+		self.prev_vel_PD = np.zeros(4)
+		self.prev_vel1_PD = np.zeros(4)
+		self.prev_vel2_PD = np.zeros(4)
+		self.prev_vel3_PD = np.zeros(4)
+		self.prev_vel4_PD = np.zeros(4)
+		self.prev_wt_vel_PD = np.zeros(4)
+
 		self.prev_state = np.zeros(self.NJoints)
 		self.prev_vel = np.zeros(self.NJoints)
 		self.prev_vel1 = np.zeros(self.NJoints)
@@ -62,9 +69,9 @@ class KukaController:
 	def getJointState(self, data):
 		self.state = np.asarray(data.joint_positions)
 		self.t = rospy.get_time() - self.t0 #clock
-		self.impedance_6d()
+		# self.impedance_6d()
 		# self.pointcontrol_w_GravCompensation()
-		# self.Hybrid_PD_Impedance()
+		self.Hybrid_PD_Impedance()
 
 
 	def generate_trajectory(self, x):
@@ -332,15 +339,15 @@ class KukaController:
 		NJoints_PD = 4 # tip, ball, two revolutes
 		
 		# Initializing the gain values
-		K_PD = 10*np.eye(NJoints_PD)
+		K_PD = 100*np.eye(NJoints_PD)
 		D_PD = 0.7*np.eye(NJoints_PD)
-		K[3,3] = 0.01
-		D[3,3] = 0.0001
-		K[4,4] = 0.01
-		D[4,4] = 0.0001
+		K_PD[2,2] = 0.01
+		D_PD[2,2] = 0.0001
+		K_PD[3,3] = 0.01
+		D_PD[3,3] = 0.0001
 
 		stateGoal_PD = np.array([3.14/2, 0.0, 0.0, 0.0])
-		stateGoal_PD = np.copy(np.array(stateGoal[0:NJoints_PD]))
+		stateGoal_PD = np.copy(np.array(stateGoal_PD[0:NJoints_PD]))
 		velGoal_PD = np.zeros(NJoints_PD)
 
 		# while loop stuff here
@@ -349,28 +356,30 @@ class KukaController:
 		# print(1/dt)
 		self.prev_time = time
 
-		PD_state = self.state [3:6]
+		PD_state = self.state [3:]
 	#********************* potential change should be made to the vel, instead of self.state use PID_state************************************************
-		vel_PD = (self.state[3:6] - self.prev_state_PD)/dt
-		wt_vel_PD = (0.925*vel_PD + 0.7192*self.prev_vel + 0.4108*self.prev_vel1+0.09*self.prev_vel2)/(0.4108+0.7192+0.925+0.09)
+		vel_PD = (self.state[3:] - self.prev_state_PD)/dt
+		wt_vel_PD = (0.925*vel_PD + 0.7192*self.prev_vel_PD + 0.4108*self.prev_vel1_PD+0.09*self.prev_vel2_PD)/(0.4108+0.7192+0.925+0.09)
 
-		acc = (wt_vel - self.prev_wt_vel)/dt
+		acc = (wt_vel_PD - self.prev_wt_vel_PD)/dt
 		G = get_G(self.state)
-		err = np.asarray(stateGoal - self.state)
-		derr = velGoal - vel
-		tau = G + np.dot(K,err) + np.dot(D,derr)
+		G1 = G[3:]
+		err_PD = np.asarray(stateGoal_PD - self.state[3:])
+		derr_PD = velGoal_PD - vel_PD
+		tau = G1 + np.dot(K_PD,err_PD) + np.dot(D_PD,derr_PD)
 
-		self.cmd_msg.joint_cmds = [tau[3],tau[4],tau[5],tau[6]]
+		self.cmd_msg.joint_cmds = [0,0,0,tau[0],tau[1],tau[2],tau[3]]
 		self.pub.publish(self.cmd_msg)
 
-		self.prev_state = self.state[3:7]
-		self.prev_vel = vel_PD
-		self.prev_vel1 = self.prev_vel
-		self.prev_vel2 = self.prev_vel1
-		self.prev_vel3 = self.prev_vel2
-		self.prev_vel4 = self.prev_vel3
-		self.prev_wt_vel = wt_vel
-		# print "Err is :", err
+		self.prev_state_PD = self.state[3:]
+		self.prev_vel_PD = vel_PD
+		self.prev_vel1_PD = self.prev_vel_PD
+		self.prev_vel2_PD = self.prev_vel1_PD
+		self.prev_vel3_PD = self.prev_vel2_PD
+		self.prev_vel4_PD = self.prev_vel3_PD
+		self.prev_wt_vel_PD = wt_vel_PD
+		print "Err is :", err_PD
+
 
 
 	def pointcontrol_w_GravCompensation(self):
