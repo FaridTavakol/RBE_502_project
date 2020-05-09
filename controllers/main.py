@@ -54,7 +54,7 @@ class KukaController:
 
 		# Set end-effector desired velocity here
 		self.X_SPEED = np.zeros(3)
-		self.X_SPEED[1] = .3
+		self.X_SPEED[0] = 5
 
 		self.x_speed_local = self.X_SPEED
 
@@ -65,34 +65,23 @@ class KukaController:
 		self.reduced_ctrl()
 
 	def generate_trajectory(self, x):
-		xllim = -0.6
-		xulim = 0.2
+		xllim = -0.1
+		xulim = 0.3
 
-		if x[1] > xulim :
+		if x[0] > xulim :
 			self.x_speed_local = -self.X_SPEED
-		elif x[1] < xllim :
+		elif x[0] < xllim :
 			self.x_speed_local = self.X_SPEED
 
-		x_des = x + self.x_speed_local * (self.dt)+0.03
+		x_des = x + self.x_speed_local * (self.dt)
 		velX_des = self.x_speed_local
 
-		# print "x_speed_local : ", self.x_speed_local
-		# print "velX_des", velX_des
 		return [x_des, velX_des]
-
-	# def generate_trajectory(self, x): # modified for set point tracking
-
-	# 	# x_des = np.array([-0.2, -0.3, 0.5, 0.2, 0.2, 0.2]) #desired state based on the cartesian position & rpy
-
-	# 	x_des = np.array([0.4, -0.4, 0.5, 3.14/2 , 0, 0]) #desired state based on the cartesian position & rpy
-	# 	velX_des = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0] # desired velocity
-
-	# 	return [x_des, velX_des]
 
 	def reduced_ctrl(self):
 
 		# Controller gains 3x3 for position control only
-		Kp = 1 * np.eye(3)
+		Kp = 3 * np.eye(3)
 		Kd = 0.1 * np.eye(3)
 
 		self.dt = self.t - self.prev_time
@@ -103,7 +92,12 @@ class KukaController:
 		x = get_5_pos(reduced_state)
 
 		# Desired position, velocity, acceleration
-		XGoal = np.array([-0.1, -0.2, 0.3])
+		traj = self.generate_trajectory(x)
+		XGoal = traj[0]
+		XGoal[1] = -0.3
+		XGoal[2] = 0.5
+		# XGoal = np.array([-0.1, -0.2, 0.3])
+		XvelGoal = traj[1]
 		XvelGoal = np.zeros(3)
 		XaccGoal = np.zeros(3)
 
@@ -141,7 +135,7 @@ class KukaController:
 		# Joint space control for 6th joint:
 		Kpq = 0.01
 		Kdq = 0.001
-		qGoal = np.pi/2
+		qGoal = -np.pi/2
 		qvelGoal = 0
 		errq = qGoal - self.state[5]
 		derrq = qvelGoal - velq
