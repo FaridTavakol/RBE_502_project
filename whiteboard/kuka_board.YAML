@@ -239,11 +239,11 @@ JOINT base-link1:
   parent pivot: {x: 0.0, y: 0.0, z: 0.103}
   child axis: {x: 0.0, y: 0.0, z: 1.0}
   child pivot: {x: 0.0, y: 0.0, z: 0.0}
-  # joint limits: {high: 2.094, low: -2.094}
-  joint limits: {high: 4.094, low: -4.094}
+  joint limits: {high: 2.094, low: -2.094}
+  # joint limits: {high: 4.094, low: -4.094}
   controller: {P: 1000.0, I: 0, D: 2.0}
   detached: true
-  type: continuous
+  type: revolute
   damping: 0.0
 JOINT link1-link2:
   name: link1-link2
@@ -253,11 +253,11 @@ JOINT link1-link2:
   parent pivot: {x: 0.0, y: 0.013, z: 0.209}
   child axis: {x: 0.0, y: 0.0, z: 1.0}
   child pivot: {x: 0.0, y: -0.0, z: -0.0}
-  # joint limits: {high: 2.094, low: -2.094}
-  joint limits: {high: 4.094, low: -4.094}
+  joint limits: {high: 2.094, low: -2.094}
+  # joint limits: {high: 4.094, low: -4.094}
   controller: {P: 2000.0, I: 0, D: 4.0}
   detached: true
-  type: continuous
+  type: revolute
   damping: 0.0
 JOINT link2-link3:
   name: link2-link3
@@ -267,11 +267,11 @@ JOINT link2-link3:
   parent pivot: {x: 0.0, y: -0.194, z: -0.009}
   child axis: {x: 0.0, y: 0.0, z: 1.0}
   child pivot: {x: 0.0, y: 0.0, z: 0.0}
-  # joint limits: {high: 2.094, low: -2.094}
-  joint limits: {high: 4.094, low: -4.094}
+  joint limits: {high: 2.094, low: -2.094}
+  # joint limits: {high: 4.094, low: -4.094}
   controller: {P: 2000.0, I: 0, D: 4.0}
   detached: true
-  type: continuous
+  type: revolute
   damping: 0.0
 JOINT link3-link4:
   name: link3-link4
@@ -281,11 +281,11 @@ JOINT link3-link4:
   parent pivot: {x: 0.0, y: -0.013, z: 0.202}
   child axis: {x: 0.0, y: 0.0, z: 1.0}
   child pivot: {x: 0.0, y: -0.0, z: -0.0}
-  # joint limits: {high: 2.094, low: -2.094}
-  joint limits: {high: 4.094, low: -4.094}
+  joint limits: {high: 2.094, low: -2.094}
+  # joint limits: {high: 4.094, low: -4.094}
   controller: {P: 200.0, I: 0, D: 4.0}
   detached: true
-  type: continuous
+  type: revolute
   damping: 0.0
 JOINT link4-link5:
   name: link4-link5
@@ -295,11 +295,11 @@ JOINT link4-link5:
   parent pivot: {x: -0.002, y: 0.202, z: -0.008}
   child axis: {x: 0.0, y: 0.0, z: 1.0}
   child pivot: {x: 0.0, y: -0.0, z: -0.0}
-  # joint limits: {high: 2.094, low: -2.094}
-  joint limits: {high: 4.094, low: -4.094}
+  joint limits: {high: 2.094, low: -2.094}
+  # joint limits: {high: 4.094, low: -4.094}
   controller: {P: 200.0, I: 0, D: 4.0}
   detached: true
-  type: continuous
+  type: revolute
   damping: 0.0
 JOINT link5-link6:
   name: link5-link6
@@ -309,11 +309,11 @@ JOINT link5-link6:
   parent pivot: {x: 0.002, y: -0.052, z: 0.204}
   child axis: {x: 0.0, y: 0.0, z: 1.0}
   child pivot: {x: 0.0, y: 0.0, z: -0.0}
-  # joint limits: {high: 2.094, low: -2.094}
-  joint limits: {high: 4.094, low: -4.094}
+  joint limits: {high: 2.094, low: -2.094}
+  # joint limits: {high: 4.094, low: -4.094}
   controller: {P: 50.0, I: 0, D: 1}
   detached: true
-  type: continuous
+  type: revolute
   damping: 0.0
 JOINT link6-link7:
   name: link6-link7
@@ -326,5 +326,5 @@ JOINT link6-link7:
   joint limits: {high: 3.054, low: -3.054}
   controller: {P: 50.0, I: 0, D: 1}
   detached: true
-  type: continuous
+  type: revolute
   damping: 0.0
