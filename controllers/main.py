@@ -61,7 +61,8 @@ class KukaController:
 	def getJointState(self, data):
 		self.state = np.asarray(data.joint_positions)
 		self.t = rospy.get_time() - self.t0 #clock
-		self.impedance_6d()
+		# self.impedance_6d()
+		self.pointcontrol_w_GravCompensation()
 
 	def generate_trajectory(self, x):
 		xllim = -0.6
@@ -103,9 +104,9 @@ class KukaController:
 		# Kd[3][3] = 0.005
 		# Kd[4][4] = 0.0050
 		# Kd[5][5] = 0.0050
-		Kp = 15 * np.eye(6) #1.2 0.7Stiffness Matrix
+		Kp = 5 * np.eye(6) #1.2 0.7Stiffness Matrix
 
-		Kp[1][1] = 15
+		Kp[1][1] = 5
 		# Kp[3][3] = 0.0017
 		# Kp[4][4] = 0.0017
 		# Kp[5][5] = 0.0017
@@ -115,7 +116,7 @@ class KukaController:
 
 
 
-		Kd = 5 * np.eye(6) #3.5-5  25 Damping Matrix
+		Kd = 1 * np.eye(6) #3.5-5  25 Damping Matrix
 		Kd[3][3] = 0.005
 		Kd[4][4] = 0.0050
 		Kd[5][5] = 0.0050
@@ -143,8 +144,8 @@ class KukaController:
 		# XGoal[4] = np.pi/2
 		# XGoal[5] = np.pi
 		XGoal[3] = 3.14/2
-		XGoal[4] = 0
-		XGoal[5] = 0
+		XGoal[4] = 3.14/2
+		XGoal[5] = 3.14/2
 		XvelGoal = traj[1]
 		XaccGoal = np.zeros(6)
 
@@ -473,13 +474,14 @@ class KukaController:
 	def pointcontrol_w_GravCompensation(self):
 
 		# Parameters for impedance controller
-		K = 2*np.eye(self.NJoints)
-		D = 0.1*np.eye(self.NJoints)
-		D[5,5] = 0.5
-		D[3,3] = 0.5
-		M = 0.00001*np.eye(self.NJoints)
+		K = 10*np.eye(self.NJoints)
+		D = 0.7*np.eye(self.NJoints)
+		K[5,5] = 0.01
+		D[5,5] = 0.0001
+		K[6,6] = 0.01
+		D[6,6] = 0.0001
 
-		stateGoal = np.array([-0.08,-1.5, 0.07, -0.9, -2.07, 2.2, -0.8])
+		stateGoal = np.array([3.14/4,3.14/4, 0.0, -0.0, -0.0, 0.0, -0.2])
 		stateGoal = np.copy(np.array(stateGoal[0:self.NJoints]))
 		velGoal = np.zeros(self.NJoints)
 		accGoal = np.zeros(self.NJoints)
@@ -497,7 +499,7 @@ class KukaController:
 		acc = (wt_vel - self.prev_wt_vel)/dt
 
 		# T_int = inverse_dynamics(self.state, vel, acc)
-		T_int = get_G(self.state)
+		G = get_G(self.state)
 
 		# print "T: ", T
 		# print "G: ", vel
@@ -508,9 +510,9 @@ class KukaController:
 
 		err = np.asarray(stateGoal - self.state)
 		derr = velGoal - vel
-		dderr = accGoal - acc
+		# dderr = accGoal - acc
 
-		tau = T_int + np.dot(K,err) + np.dot(D,derr) + np.dot(M,dderr)
+		tau = G + np.dot(K,err) + np.dot(D,derr)# + np.dot(M,dderr)
 
 		self.cmd_msg.joint_cmds = [tau[0],tau[1],tau[2],tau[3],tau[4],tau[5],tau[6]]
 		self.pub.publish(self.cmd_msg)

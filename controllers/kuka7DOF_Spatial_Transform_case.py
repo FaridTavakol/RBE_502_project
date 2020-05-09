@@ -3,9 +3,7 @@ import numpy as np
 import rbdl
 import yaml
 
-def get_joint_num():
-    num = 7
-    return num
+
 
 # Create a body for a given mass, center of mass, and inertia at
 # the CoM
@@ -145,6 +143,9 @@ print("Size of q:",np.size(q))
 # Giving an arbitrary location described in the local frame and printing it's
 # location wrt the world frame
 
+def get_joint_num():
+    num = 7
+    return num
 
 def get_end_effector_pos(q):
     point_local = np.array([0.0, 0.0, 0.0])
