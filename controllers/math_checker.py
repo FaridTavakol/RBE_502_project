@@ -35,16 +35,18 @@ x_pos = get_end_effector_pos(q)
 print x_pos
 print np.linalg.inv(get_rot(q))
 orientation = R.from_dcm(np.linalg.inv(get_rot(q)))
-print orientation
+quaternion = orientation.as_quat()
+print quaternion
+# print orientation
 x_orientation = orientation.as_euler('zyx', degrees=True)
-print x_orientation
-J = get_6_jacobian(q)
-print "J(1-3) = ", J[0:3]
-print "J(4-6) = ", J[3:]
-B = np.array([[1,0,np.sin(x_orientation[1])],[0,np.cos(x_orientation[0]),-np.cos(x_orientation[1])*np.sin(x_orientation[0])],[0,np.sin(x_orientation[0]),np.cos(x_orientation[1])*np.cos(x_orientation[0])]])
-print "B = ", B
-transform_B = np.zeros((6,6))
-transform_B[0:3,0:3] = np.eye(3)
-transform_B[3:,3:] = B
-print transform_B
+# print x_orientation
+# J = get_6_jacobian(q)
+# print "J(1-3) = ", J[0:3]
+# print "J(4-6) = ", J[3:]
+# B = np.array([[1,0,np.sin(x_orientation[1])],[0,np.cos(x_orientation[0]),-np.cos(x_orientation[1])*np.sin(x_orientation[0])],[0,np.sin(x_orientation[0]),np.cos(x_orientation[1])*np.cos(x_orientation[0])]])
+# print "B = ", B
+# transform_B = np.zeros((6,6))
+# transform_B[0:3,0:3] = np.eye(3)
+# transform_B[3:,3:] = B
+# print transform_B
 time.sleep(40)

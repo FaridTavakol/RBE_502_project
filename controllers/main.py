@@ -96,31 +96,12 @@ class KukaController:
 	def pid_controller(self):
 
 
-		# Kp = 1.2 * np.eye(6) #1.2 0.7Stiffness Matrix
-
-		# # # Kp[1][1] = 0.01
-		# Kp[3][3] = 0.0017
-		# Kp[4][4] = 0.0017
-		# Kp[5][5] = 0.0017
-
-
-		# Kd = 5 * np.eye(6) #3.5-5  25 Damping Matrix
-		# Kd[3][3] = 0.005
-		# Kd[4][4] = 0.0050
-		# Kd[5][5] = 0.0050
 		Kp = 1 * np.eye(6) #1.2 0.7Stiffness Matrix
+		Kp[3][3] = 1
+		Kp[4][4] = 1
+		Kp[5][5] = 1
 
-		# Kp[1][1] = 15
-		# Kp[3][3] = 0.0017
-		# Kp[4][4] = 0.0017
-		# Kp[5][5] = 0.0017
-		Kp[3][3] = 50
-		Kp[4][4] = 50
-		Kp[5][5] = 50
-
-
-
-		Kd = 5 * np.eye(6) #3.5-5  25 Damping Matrix
+		Kd = 0.01 * np.eye(6) #3.5-5  25 Damping Matrix
 		# Kd[3][3] = 0.005
 		# Kd[4][4] = 0.0050
 		# Kd[5][5] = 0.0050
@@ -136,14 +117,20 @@ class KukaController:
 		ne = Re[:,0]
 		se = Re[:,1]
 		ae = Re[:,2]
-		print "z:",ae
+		# print "z:",ae
 		Red = np.array([[1,0,0],[0,0,-1],[0,1,0]])
 		ned = Red[:,0]
 		sed = Red[:,1]
 		aed = Red[:,2]
-		print "zd:",aed
+		# print "zd:",aed
 		eo = 0.5*(np.cross(ne,ned)+np.cross(se,sed)+np.cross(ae,aed))
 		L = -0.5*(np.matmul(skew(ned),skew(ne))+np.matmul(skew(sed),skew(se))+np.matmul(skew(aed),skew(ae)))
+
+
+		R_ed = np.dot(np.transpose(np.eye(3)),np.linalg.inv(get_rot(self.state)))
+		q_ed = orientation.as_quat()
+		eo = -np.dot(np.linalg.inv(get_rot(self.state)),q_ed[:3])
+		print "eo:",eo
 		# Get state x as 6x1 vector including the orientation(rpy)
 		# print "x = ", x
 
@@ -155,7 +142,7 @@ class KukaController:
 		# stateGoal = np.array([-0.08,-1.5, 0.07, -0.9, -2.07, 2.2, -0.8])
 		XGoal = traj[0]
 		XGoal[0] = 0.2
-		XGoal[1] = -0.2
+		# XGoal[1] = -0.2
 		XGoal[2] = 0.6
 		# XGoal[3] = np.pi
 		# XGoal[4] = np.pi/2
@@ -188,11 +175,12 @@ class KukaController:
 		dummy_J = get_6_jacobian(self.state)
 
 		J = np.concatenate((dummy_J[3:] , dummy_J[0:3])) # analytic Jacobian
-		# J = np.dot(transform_B, J)
+		J = np.dot(transform_B, J)
+
 		omega = np.matmul(J,vel)[3:]
 		deo = -np.matmul(L,omega)
-		xd = np.array([0.2, -0.2, 0.5])
-		dxd = np.zeros(3)
+		xd = np.array([0.2, XGoal[1], 0.5])
+		dxd = XvelGoal[:3]
 		ex = x_pos-xd
 		dex = velX[:3] - dxd
 		e = np.concatenate((ex,eo))
@@ -212,14 +200,14 @@ class KukaController:
 
 		Mq = get_M(self.state)
 		# For 6x6 Jacobian:
-		Mq = Mq[:6,:6]
+		# Mq = Mq[:6,:6]
 
 		G = get_G(self.state)
 		# For 6x6 Jacobian:
-		G = G[:6]
+		# G = G[:6]
 		C_qdot = get_C_qdot(self.state,vel)
 		# For 6x6 Jacobian:
-		C_qdot = C_qdot[:6]
+		# C_qdot = C_qdot[:6]
 		# The problem is most probably here. One thing
 		# tau = np.dot(Mq,np.dot(J_inv,(XaccGoal - np.dot(dJ,vel)))) + np.dot(C_qdot,vel) + G + np.dot(np.transpose(J_a),(np.dot(Kd,(XvelGoal - velX)) + np.dot(Kp,(XGoal - x))))
 		# For 6x7 Jacobian
@@ -230,6 +218,7 @@ class KukaController:
 		# q = self.state[:6]
 		# tau = np.zeros(7)
 		tau = inverse_dynamics(self.state, vel, aq)
+		# tau = -np.matmul(np.transpose(J),np.matmul(Kp,(x-XGoal))) - np.matmul(np.transpose(J),np.matmul(Kd,np.matmul(J,vel))) + G
 		# For 6x6 Jacobian
 		# tau = np.zeros(7)
 		# tau[0:6] = -np.matmul(np.transpose(J),np.matmul(Kp,(x-XGoal))) - np.matmul(np.transpose(J),np.matmul(Kd,np.matmul(J,vel))) + G
