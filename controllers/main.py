@@ -109,6 +109,7 @@ class KukaController:
 
 		# q_dot -> for 5 joints only
 		vel = (self.state - self.prev_state)/self.dt
+		velq = vel[5]
 		vel = vel[:5]
 
 		# Task space velocity -> linear velocity of the end of the link5
@@ -130,11 +131,23 @@ class KukaController:
 		G = get_G(self.state)
 		C_qdot = get_C_qdot(self.state,vel)
 		Mq = Mq[:5,:5]
+		Gq = G[5]
 		G = G[:5]
 		C_qdot = C_qdot[:5]
 
 		tau = np.zeros(7)
 		tau[:5] = np.dot(Mq,np.dot(J_inv,(XaccGoal - np.dot(dJ,vel)))) + np.dot(C_qdot,vel) + G + np.dot(np.transpose(J),(np.dot(Kd,derrX) + np.dot(Kp,errX)))
+
+		# Joint space control for 6th joint:
+		Kpq = 0.01
+		Kdq = 0.001
+		qGoal = np.pi/2
+		qvelGoal = 0
+		errq = qGoal - self.state[5]
+		derrq = qvelGoal - velq
+
+		tau[5] = Gq + np.dot(Kpq,errq) + np.dot(Kdq,derrq)
+
 		self.cmd_msg.joint_cmds = [tau[0],tau[1],tau[2],tau[3],tau[4],tau[5],tau[6]]
 		self.pub.publish(self.cmd_msg)
 
