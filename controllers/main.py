@@ -33,6 +33,8 @@ class KukaController:
 		self.cmd_msg = cmd_msg
 		self.t0 = rospy.get_time()
 		self.prev_time = 0
+		self.prev_time_PD = 0
+
 
 		## Joint Space
 		self.prev_state_PD = np.zeros(4) #the last 4 joints are controller using PID
@@ -43,26 +45,39 @@ class KukaController:
 		self.prev_vel4_PD = np.zeros(4)
 		self.prev_wt_vel_PD = np.zeros(4)
 
-		self.prev_state = np.zeros(self.NJoints)
-		self.prev_vel = np.zeros(self.NJoints)
-		self.prev_vel1 = np.zeros(self.NJoints)
-		self.prev_vel2 = np.zeros(self.NJoints)
-		self.prev_vel3 = np.zeros(self.NJoints)
-		self.prev_vel4 = np.zeros(self.NJoints)
-		self.prev_wt_vel = np.zeros(self.NJoints)
+		self.prev_state = np.zeros(3)
+		self.prev_vel = np.zeros(3)
+		self.prev_vel1 = np.zeros(3)
+		self.prev_vel2 = np.zeros(3)
+		self.prev_vel3 = np.zeros(3)
+		self.prev_vel4 = np.zeros(3)
+		self.prev_wt_vel = np.zeros(3)
+		self.XGoal = np.zeros(3)
+			
+		self.prev_J = 0*np.eye(3)
+
+
+
+		# self.prev_state = np.zeros(self.NJoints)
+		# self.prev_vel = np.zeros(self.NJoints)
+		# self.prev_vel1 = np.zeros(self.NJoints)
+		# self.prev_vel2 = np.zeros(self.NJoints)
+		# self.prev_vel3 = np.zeros(self.NJoints)
+		# self.prev_vel4 = np.zeros(self.NJoints)
+		# self.prev_wt_vel = np.zeros(self.NJoints)
 		# Jacobian 6x7
 		# self.prev_J = np.zeros((6,self.NJoints))
 		# Jacobian 6x6
-		self.prev_J = np.zeros((6,self.NJoints-1))
+		# self.prev_J = np.zeros((6,self.NJoints))
 
 
 		## Task Space
-		self.prev_x = np.zeros(6)
-		self.prev_velX = np.zeros(6)
+		self.prev_x = np.zeros(3)
+		self.prev_velX = np.zeros(3)
 
 		# Set end-effector desired velocity here
-		self.X_SPEED = np.zeros(6)
-		self.X_SPEED[1] = .3
+		self.X_SPEED = np.zeros(3)
+		self.X_SPEED[1] = .05
 
 		self.x_speed_local = self.X_SPEED
 
@@ -75,15 +90,15 @@ class KukaController:
 
 
 	def generate_trajectory(self, x):
-		xllim = -0.6
-		xulim = 0.2
+		yllim = -0.2
+		yulim = 0.2
 
-		if x[1] > xulim :
+		if x[1] > yulim :
 			self.x_speed_local = -self.X_SPEED
-		elif x[1] < xllim :
+		elif x[1] < yllim :
 			self.x_speed_local = self.X_SPEED
 
-		x_des = x + self.x_speed_local * (self.dt)+0.03
+		x_des = x + self.x_speed_local * (self.dt)#+0.03
 		velX_des = self.x_speed_local
 
 		# print "x_speed_local : ", self.x_speed_local
@@ -335,40 +350,173 @@ class KukaController:
 		self.prev_J = J
 
 	def Hybrid_PD_Impedance(self):
-		# Parameters for impedance controller
+# ==============================Impedance portion ============================		
+
+		# Kp = 0*np.eye(3) #Stiffness Matrix 3x3
+		# Kd = 0*0.01*np.eye(3) # Damping Matrix 3x3
+		# Md = 0*0.01*np.eye(3) # Desired Inertia 3x3
+		# x = get_end_effector_pos_link3(self.state)
+		# print "x = ", x
+		# # traj = self.generate_trajectory(x)
+		# # stateGoal = np.array([-0.08,-1.5, 0.07, -0.9, -2.07, 2.2, -0.8])
+		
+		# self.XGoal[0] = 0.0
+		# self.XGoal[1]= 0.2 #traj[0]
+		# self.XGoal[2] = 0.3
+		# XvelGoal = np.zeros(3) #traj[1]
+		# XaccGoal = np.zeros(3)
+
+		# time = rospy.get_time()
+		# dt = time - self.prev_time
+		# self.prev_time = time
+
+		# vel = (self.state [:3] - self.prev_state)/dt
+		# self.prev_state = self.state[:3]
+
+		# wt_vel = (0.925*vel + 0.7192*self.prev_vel + 0.4108*self.prev_vel1+0.09*self.prev_vel2)/(0.4108+0.7192+0.925+0.09)
+		# acc = (wt_vel - self.prev_wt_vel)/dt
+
+		# velX = (x - self.prev_x)/dt
+		# # print "dx = ", x
+
+
+
+		# errX = np.asarray(self.XGoal - x)
+		# derrX = XvelGoal - velX
+
+		# J = get_end_effector_jacobian_link3(self.state)
+		# J1 = J[:,:3]
+		# J_inv = np.linalg.inv(J1)
+		# dJ = (J1 - self.prev_J)/dt
+
+		# Mq = get_M(self.state)
+		# Mq1 = Mq [:3,:3]
+
+		# # Mx = np.dot(np.dot(np.transpose(J_inv),Mq1),J_inv)
+
+		# # F = np.dot(np.dot(np.linalg.inv(Md), Mx),( np.dot(Kd, derrX) + np.dot(Kp, errX) ) )
+
+		# G = get_G(self.state)
+		# G1 = G[:3]
+
+		# C_qdot = get_C_qdot(self.state,vel)
+		# C_qdot1 = C_qdot [:3]
+		# # G = inverse_dynamics(self.state, vel, acc)
+		# tau_ = np.dot(Mq1,np.dot(J_inv,(XaccGoal - np.dot(dJ,vel)))) + np.dot(C_qdot1,vel) + G1 + np.dot(np.transpose(J1),(np.dot(Kd,(derrX)) + np.dot(Kp,(errX))))
+		# # self.cmd_msg.joint_cmds = [tau_[0], tau_[1], tau_[2]]
+		# # self.pub.publish(self.cmd_msg)
+
+		#===========================================================================================================================================
+		Kp = 0.3*np.eye(3) #Stiffness Matrix
+		# Kp[1][1] = 0
+		# Kp[2][2] = 0
+
+		Kd = 0.0001*np.eye(3) # Damping Matrix
+		Md = 0.02*np.eye(3)
+
+		self.dt = self.t - self.prev_time
+		x = get_end_effector_pos_link3(self.state)
+		
+		print "x = ", x
+
+		# traj = self.generate_trajectory(x)
+
+		## stateGoal = np.array([-0.08,-1.5, 0.07, -0.9, -2.07, 2.2, -0.8])
+		# XGoal = traj[0]
+		# XGoal[0] = -0.1
+		# XGoal[2] = 0.6
+		# XvelGoal = traj[1]
+		# XaccGoal = 0*np.ones(3)
+		self.XGoal[0] = -0.1
+		self.XGoal[1]= 0.3 #traj[0]
+		self.XGoal[2] = 0.3
+		XvelGoal = np.zeros(3) #traj[1]
+		XaccGoal = np.zeros(3)
+		# while loop stuff here
+
+		vel = (self.state[:3] - self.prev_state)/self.dt
+		wt_vel = (0.925*vel + 0.7192*self.prev_vel + 0.4108*self.prev_vel1+0.09*self.prev_vel2)/(0.4108+0.7192+0.925+0.09)
+		acc = (wt_vel - self.prev_wt_vel)/self.dt
+
+		velX = (x - self.prev_x)/self.dt
+
+		errX = np.asarray(self.XGoal - x)
+		derrX = XvelGoal - velX
+
+		# J = get_end_effector_jacobian_link3(self.state)
+		# J1 = J[:,:3]
+		# J_inv = np.linalg.inv(J1)
+		J = get_end_effector_jacobian_link3(self.state)
+		J1 = J[:,:3]
+		J_inv = np.linalg.pinv(J1)
+
+		Mq = get_M(self.state)
+		Mq1 = Mq [:3,:3]
+
+		Mx = np.dot(np.dot(np.transpose(J_inv),Mq1),J_inv)
+
+		F = np.dot(np.dot(np.linalg.inv(Md), Mx),( np.dot(Kd, derrX) + np.dot(Kp, errX) ) )
+
+		G = get_G(self.state)
+		G3 = G[:3]
+		# G = inverse_dynamics(self.state, vel, acc)
+		tau_ = G3 + np.dot(np.transpose(J1),F)
+
+		# self.cmd_msg.joint_cmds = [tau[0],tau[1],tau[2],tau[3],tau[4],tau[5],tau[6]]
+		# self.pub.publish(self.cmd_msg)
+
+		self.prev_time = self.t
+		self.prev_state = self.state[:3]
+		self.prev_vel = vel
+		self.prev_vel1 = self.prev_vel
+		self.prev_vel2 = self.prev_vel1
+		self.prev_vel3 = self.prev_vel2
+		self.prev_vel4 = self.prev_vel3
+		self.prev_wt_vel = wt_vel
+		self.prev_x = x
+#===========================================================================================================================================
+
+# ============================ PD portion =================================		
+		# Parameters for PD controller
 		NJoints_PD = 4 # tip, ball, two revolutes
 		
 		# Initializing the gain values
-		K_PD = 100*np.eye(NJoints_PD)
-		D_PD = 0.7*np.eye(NJoints_PD)
+		K_PD = 1*np.eye(NJoints_PD)#10
+		D_PD = 0.07*np.eye(NJoints_PD)#0.7
 		K_PD[2,2] = 0.01
 		D_PD[2,2] = 0.0001
 		K_PD[3,3] = 0.01
 		D_PD[3,3] = 0.0001
 
-		stateGoal_PD = np.array([3.14/2, 0.0, 0.0, 0.0])
+		stateGoal_PD = np.array([0, 0.0, 0.0, 0.0])
 		stateGoal_PD = np.copy(np.array(stateGoal_PD[0:NJoints_PD]))
 		velGoal_PD = np.zeros(NJoints_PD)
 
 		# while loop stuff here
 		time = rospy.get_time()
-		dt = time - self.prev_time
+		dt = time - self.prev_time_PD
 		# print(1/dt)
-		self.prev_time = time
+		self.prev_time_PD = time
 
-		PD_state = self.state [3:]
+		# PD_state = self.state [3:]
 	#********************* potential change should be made to the vel, instead of self.state use PID_state************************************************
 		vel_PD = (self.state[3:] - self.prev_state_PD)/dt
 		wt_vel_PD = (0.925*vel_PD + 0.7192*self.prev_vel_PD + 0.4108*self.prev_vel1_PD+0.09*self.prev_vel2_PD)/(0.4108+0.7192+0.925+0.09)
 
 		acc = (wt_vel_PD - self.prev_wt_vel_PD)/dt
 		G = get_G(self.state)
-		G1 = G[3:]
+		G2 = G[3:]
 		err_PD = np.asarray(stateGoal_PD - self.state[3:])
 		derr_PD = velGoal_PD - vel_PD
-		tau = G1 + np.dot(K_PD,err_PD) + np.dot(D_PD,derr_PD)
+		tau = G2 + np.dot(K_PD,err_PD) + np.dot(D_PD,derr_PD)
 
-		self.cmd_msg.joint_cmds = [0,0,0,tau[0],tau[1],tau[2],tau[3]]
+		# self.cmd_msg.joint_cmds = [G1[0], G1[1], G1[2],tau[0], tau[1], tau[2], tau[3]]
+		self.cmd_msg.joint_cmds = [tau_[0], tau_[1], tau_[2],tau[0], tau[1], tau[2], tau[3]]
+		 
+
+		# print "tau_" , tau_
+		# print "tau" , tau
+
 		self.pub.publish(self.cmd_msg)
 
 		self.prev_state_PD = self.state[3:]
@@ -378,8 +526,16 @@ class KukaController:
 		self.prev_vel3_PD = self.prev_vel2_PD
 		self.prev_vel4_PD = self.prev_vel3_PD
 		self.prev_wt_vel_PD = wt_vel_PD
-		print "Err is :", err_PD
+		# print "Err is :", err_PD
 
+		self.prev_vel = vel
+		self.prev_vel1 = self.prev_vel
+		self.prev_vel2 = self.prev_vel1
+		self.prev_vel3 = self.prev_vel2
+		self.prev_vel4 = self.prev_vel3
+		self.prev_wt_vel = wt_vel
+		self.prev_x = x
+		self.prev_J = J1
 
 
 	def pointcontrol_w_GravCompensation(self):
