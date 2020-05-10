@@ -162,6 +162,11 @@ def get_rot(q):
     end_rot = rbdl.CalcBodyWorldOrientation(model, q, body_8)
     return end_rot
 
+def get_5_rot(q):
+    point_local = np.array([0.0, 0.0, 0.0])
+    rot_5 = rbdl.CalcBodyWorldOrientation(model, q, body_6)
+    return rot_5
+
 def get_end_effector_jacobian(q):
     J = np.zeros([3,model.qdot_size])
     point_local = np.array([0.0, 0.0, 0.0])

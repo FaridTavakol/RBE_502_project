@@ -78,6 +78,15 @@ class KukaController:
 
 		return [x_des, velX_des]
 
+	def generate_joint_ref(self, R):
+
+		R_des = np.eye(3)
+		R_req = np.dot(np.linalg.inv(R),R_des)
+
+		q_des = np.arcsin(R_req[2,2]) - np.pi/2
+
+		return q_des
+
 	def reduced_ctrl(self):
 
 		# Controller gains 3x3 for position control only
@@ -94,7 +103,7 @@ class KukaController:
 		# Desired position, velocity, acceleration
 		traj = self.generate_trajectory(x)
 		XGoal = traj[0]
-		XGoal[1] = -0.3
+		XGoal[1] = -0.4
 		XGoal[2] = 0.5
 		# XGoal = np.array([-0.1, -0.2, 0.3])
 		XvelGoal = traj[1]
@@ -112,7 +121,7 @@ class KukaController:
 		# error variables
 		errX = XGoal - x
 		derrX = XvelGoal - velX
-		print "error:",errX
+		# print "error:",errX
 
 		# Jacobian 3x5 -> 3 position, 5 joints
 		J = get_end_effector_jacobian(self.state)
@@ -135,10 +144,14 @@ class KukaController:
 		# Joint space control for 6th joint:
 		Kpq = 0.01
 		Kdq = 0.001
-		qGoal = -np.pi/2
+		orientation_5 = np.linalg.inv(get_5_rot(reduced_state))
+		joint_ref = self.generate_joint_ref(orientation_5)
+		qGoal = joint_ref
+		# qGoal = -np.pi/2
 		qvelGoal = 0
 		errq = qGoal - self.state[5]
 		derrq = qvelGoal - velq
+		print errq
 
 		tau[5] = Gq + np.dot(Kpq,errq) + np.dot(Kdq,derrq)
 
