@@ -434,7 +434,7 @@ class KukaController:
 		# # self.pub.publish(self.cmd_msg)
 
 		#===========================================================================================================================================
-		Kp = 0.3*np.eye(3) #Stiffness Matrix
+		Kp = 0.1*np.eye(3) #Stiffness Matrix
 		# Kp[1][1] = 0
 		# Kp[2][2] = 0
 
@@ -456,7 +456,7 @@ class KukaController:
 		# XvelGoal = traj[1]
 		# XaccGoal = 0*np.ones(3)
 		self.XGoal[0] = -0.0
-		self.XGoal[1]= -0.05 #traj[0]
+		self.XGoal[1]= +0.05 #traj[0]
 		self.XGoal[2] = 0.5
 		XvelGoal = np.zeros(3) #traj[1]
 		# XvelGoal = traj[1]
@@ -513,6 +513,8 @@ class KukaController:
 		# Initializing the gain values
 		K_PD = 1*np.eye(NJoints_PD)#10
 		D_PD = 0.07*np.eye(NJoints_PD)#0.7
+		K_PD[1,1] = 125
+		D_PD[1,1] = 0.1
 		K_PD[2,2] = 0.01
 		D_PD[2,2] = 0.0001
 		K_PD[3,3] = 0.01
