@@ -239,8 +239,8 @@ JOINT base-link1:
   parent pivot: {x: 0.0, y: 0.0, z: 0.103}
   child axis: {x: 0.0, y: 0.0, z: 1.0}
   child pivot: {x: 0.0, y: 0.0, z: 0.0}
-  joint limits: {high: 2.094, low: -2.094}
-  # joint limits: {high: 4.094, low: -4.094}
+  # joint limits: {high: 2.094, low: -2.094}
+  joint limits: {high: 4.094, low: -4.094}
   controller: {P: 1000.0, I: 0, D: 2.0}
   detached: true
   type: revolute
