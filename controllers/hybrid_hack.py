@@ -517,9 +517,9 @@ class KukaController:
 		D_PD[1,1] = 0.1
 		K_PD[2,2] = 0.01
 		D_PD[2,2] = 0.0001
-		K_PD[3,3] = 0.01
+		K_PD[3,3] = 0.1
 		D_PD[3,3] = 0.0001
-		K_PD[4,4] = 0.01
+		K_PD[4,4] = 0.1
 		D_PD[4,4] = 0.0001
 
 		q_PD = self.state[2:]

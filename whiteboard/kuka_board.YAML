@@ -193,7 +193,7 @@ BODY link7:
   publish children names: false
   publish joint names: false
   publish joint positions: false
-  friction: {rolling: 0.001, static: 0.005}
+  friction: {rolling: 0.000, static: 0.000}
   restitution: 0.0
   damping: {angular: 0.95, linear: 0.95}
   collision groups: [0]
@@ -217,7 +217,7 @@ BODY Whiteboard:
   publish children names: false
   publish joint names: true
   publish joint positions: true
-  friction: {rolling: 0.01, static: 0.5}
+  friction: {rolling: 0.001, static: 0.05}
   restitution: 0.1
   damping: {angular: 0.1, linear: 0.5}
   collision groups: []
