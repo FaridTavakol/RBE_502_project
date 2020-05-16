@@ -53,7 +53,7 @@ class KukaController:
 		self.prev_vel4 = np.zeros(3)
 		self.prev_wt_vel = np.zeros(3)
 		self.XGoal = np.zeros(3)
-			
+
 		self.prev_J = 0*np.eye(3)
 
 
@@ -81,6 +81,8 @@ class KukaController:
 
 		self.x_speed_local = self.X_SPEED
 
+		self.Q_SPEED = 1
+		self.w = self.Q_SPEED
 	def getJointState(self, data):
 		self.state = np.asarray(data.joint_positions)
 		self.t = rospy.get_time() - self.t0 #clock
@@ -350,7 +352,7 @@ class KukaController:
 		self.prev_J = J
 
 	def Hybrid_PD_Impedance(self):
-# ==============================Impedance portion ============================		
+# ==============================Impedance portion ============================
 
 		# Kp = 0*np.eye(3) #Stiffness Matrix 3x3
 		# Kd = 0*0.01*np.eye(3) # Damping Matrix 3x3
@@ -359,7 +361,7 @@ class KukaController:
 		# print "x = ", x
 		# # traj = self.generate_trajectory(x)
 		# # stateGoal = np.array([-0.08,-1.5, 0.07, -0.9, -2.07, 2.2, -0.8])
-		
+
 		# self.XGoal[0] = 0.0
 		# self.XGoal[1]= 0.2 #traj[0]
 		# self.XGoal[2] = 0.3
@@ -407,8 +409,8 @@ class KukaController:
 		# # self.pub.publish(self.cmd_msg)
 
 		#===========================================================================================================================================
-		Kp = 0.3*np.eye(3) #Stiffness Matrix
-		# Kp[1][1] = 0
+		Kp = 0.2*np.eye(3) #Stiffness Matrix
+		Kp[1][1] = 0.02
 		# Kp[2][2] = 0
 
 		Kd = 0.0001*np.eye(3) # Damping Matrix
@@ -416,7 +418,7 @@ class KukaController:
 
 		self.dt = self.t - self.prev_time
 		x = get_end_effector_pos_link3(self.state)
-		
+
 		print "x = ", x
 
 		# traj = self.generate_trajectory(x)
@@ -427,9 +429,9 @@ class KukaController:
 		# XGoal[2] = 0.6
 		# XvelGoal = traj[1]
 		# XaccGoal = 0*np.ones(3)
-		self.XGoal[0] = -0.1
-		self.XGoal[1]= 0.3 #traj[0]
-		self.XGoal[2] = 0.3
+		self.XGoal[0] = -0.0
+		self.XGoal[1]= -0.3 #traj[0]
+		self.XGoal[2] = 0.4
 		XvelGoal = np.zeros(3) #traj[1]
 		XaccGoal = np.zeros(3)
 		# while loop stuff here
@@ -476,19 +478,19 @@ class KukaController:
 		self.prev_x = x
 #===========================================================================================================================================
 
-# ============================ PD portion =================================		
+# ============================ PD portion =================================
 		# Parameters for PD controller
 		NJoints_PD = 4 # tip, ball, two revolutes
-		
+
 		# Initializing the gain values
-		K_PD = 1*np.eye(NJoints_PD)#10
+		K_PD = 1.5*np.eye(NJoints_PD)#10
 		D_PD = 0.07*np.eye(NJoints_PD)#0.7
-		K_PD[2,2] = 0.01
+		K_PD[2,2] = 0.015
 		D_PD[2,2] = 0.0001
-		K_PD[3,3] = 0.01
+		K_PD[3,3] = 0.015
 		D_PD[3,3] = 0.0001
 
-		stateGoal_PD = np.array([0, 0.0, 0.0, 0.0])
+		stateGoal_PD = np.array([np.pi/3, 0, 0.0, 0.0])
 		stateGoal_PD = np.copy(np.array(stateGoal_PD[0:NJoints_PD]))
 		velGoal_PD = np.zeros(NJoints_PD)
 
@@ -512,7 +514,7 @@ class KukaController:
 
 		# self.cmd_msg.joint_cmds = [G1[0], G1[1], G1[2],tau[0], tau[1], tau[2], tau[3]]
 		self.cmd_msg.joint_cmds = [tau_[0], tau_[1], tau_[2],tau[0], tau[1], tau[2], tau[3]]
-		 
+
 
 		# print "tau_" , tau_
 		# print "tau" , tau
@@ -541,28 +543,45 @@ class KukaController:
 	def pointcontrol_w_GravCompensation(self):
 
 		# Parameters for impedance controller
-		K = 10*np.eye(self.NJoints)
+		K = 5*np.eye(self.NJoints)
 		D = 0.7*np.eye(self.NJoints)
+		K[1,1] = 10
+		K[3,3] = 10
+		D[3,3] = 0.0001
+		K[4,4] = 0.01
+		D[4,4] = 0.0001
 		K[5,5] = 0.01
 		D[5,5] = 0.0001
 		K[6,6] = 0.01
 		D[6,6] = 0.0001
 
-		stateGoal = np.array([3.14/4,3.14/4, 0.0, -0.50, -1.0, 1.0, -0.2])
-		stateGoal = np.copy(np.array(stateGoal[0:self.NJoints]))
-		velGoal = np.zeros(self.NJoints)
+		time = rospy.get_time()
+		dt = time - self.prev_time
+
+		q3llim = np.pi/3
+		q3ulim = np.pi/2
+		# print self.state[3]
+		if self.state[3] > q3ulim :
+			self.w = -self.Q_SPEED
+		elif self.state[3] < q3llim :
+			self.w = self.Q_SPEED
+
+		q_des = self.state[3] + (self.w* dt)#+0.03
+		velQ_des = self.w
+		# print q_des
+		stateGoal = np.array([-np.pi/2, -np.pi/8, 0.0, q_des, 0, -self.state[1] + q_des - np.pi/2, 0])
+		# stateGoal = np.copy(np.array(stateGoal[0:self.NJoints]))
+		velGoal = np.array([0,0, 0.0, velQ_des, 0, 0, 0])
 		accGoal = np.zeros(self.NJoints)
 
 		# while loop stuff here
-		time = rospy.get_time()
-		dt = time - self.prev_time
 		# print(1/dt)
 		self.prev_time = time
 
 		vel = (self.state - self.prev_state)/dt
-		wt_vel = (0.925*vel + 0.7192*self.prev_vel + 0.4108*self.prev_vel1+0.09*self.prev_vel2)/(0.4108+0.7192+0.925+0.09)
+		# wt_vel = (0.925*vel + 0.7192*self.prev_vel + 0.4108*self.prev_vel1+0.09*self.prev_vel2)/(0.4108+0.7192+0.925+0.09)
 
-		acc = (wt_vel - self.prev_wt_vel)/dt
+		# acc = (wt_vel - self.prev_wt_vel)/dt
 		G = get_G(self.state)
 		err = np.asarray(stateGoal - self.state)
 		derr = velGoal - vel
@@ -573,12 +592,12 @@ class KukaController:
 
 		self.prev_state = self.state
 		self.prev_vel = vel
-		self.prev_vel1 = self.prev_vel
-		self.prev_vel2 = self.prev_vel1
-		self.prev_vel3 = self.prev_vel2
-		self.prev_vel4 = self.prev_vel3
-		self.prev_wt_vel = wt_vel
-		print "Err is :", err
+		# self.prev_vel1 = self.prev_vel
+		# self.prev_vel2 = self.prev_vel1
+		# self.prev_vel3 = self.prev_vel2
+		# self.prev_vel4 = self.prev_vel3
+		# self.prev_wt_vel = wt_vel
+		# print "Err is :", err
 
 
 	def CTC_joint_controller(self):

@@ -163,246 +163,11 @@ class KukaController:
 		# print "velX_des", velX_des
 		return [x_des, velX_des]
 
-	def impedance_6d(self):
-
-
-		# Kp = 1.2 * np.eye(6) #1.2 0.7Stiffness Matrix
-
-		# # # Kp[1][1] = 0.01
-		# Kp[3][3] = 0.0017
-		# Kp[4][4] = 0.0017
-		# Kp[5][5] = 0.0017
-
-
-		# Kd = 5 * np.eye(6) #3.5-5  25 Damping Matrix
-		# Kd[3][3] = 0.005
-		# Kd[4][4] = 0.0050
-		# Kd[5][5] = 0.0050
-		Kp = 5 * np.eye(6) #1.2 0.7Stiffness Matrix
-
-		Kp[1][1] = 5
-		# Kp[3][3] = 0.0017
-		# Kp[4][4] = 0.0017
-		# Kp[5][5] = 0.0017
-		Kp[3][3] = 0.17
-		Kp[4][4] = 0.17
-		Kp[5][5] = 0.17
-
-
-
-		Kd = 1 * np.eye(6) #3.5-5  25 Damping Matrix
-		Kd[3][3] = 0.005
-		Kd[4][4] = 0.0050
-		Kd[5][5] = 0.0050
-
-		self.dt = self.t - self.prev_time
-		x_pos = get_end_effector_pos(self.state)
-
-		orientation = R.from_dcm(np.linalg.inv(get_rot(self.state)))## change the inv to regular for get_rot maybe that is the problem
-		x_orientation = orientation.as_euler('zyx') # finding d_phi
-		x = np.concatenate((x_pos,x_orientation)) # Forming the full position matrix [p, phi]
-
-		# Get state x as 6x1 vector including the orientation(rpy)
-		# print "x = ", x
-
-		# This should return a 6x1 position reference and 6x1 velocity reference
-		# angular velocity reference should be 0, whereas angular position reference
-		# should reflect the desire orientation for writing task
-		traj = self.generate_trajectory(x)
-
-		# stateGoal = np.array([-0.08,-1.5, 0.07, -0.9, -2.07, 2.2, -0.8])
-		XGoal = traj[0]
-		XGoal[0] = 0.2
-		XGoal[2] = 0.6
-		# XGoal[3] = np.pi
-		# XGoal[4] = np.pi/2
-		# XGoal[5] = np.pi
-		XGoal[3] = 3.14/2
-		XGoal[4] = 3.14/2
-		XGoal[5] = 3.14/2
-		XvelGoal = traj[1]
-		XaccGoal = np.zeros(6)
-
-		# while loop stuff here
-		vel = (self.state - self.prev_state)/self.dt
-		# For 6x6 Jacobian:
-		vel = vel[:6]
-		# wt_vel = (0.925*vel + 0.7192*self.prev_vel + 0.4108*self.prev_vel1+0.09*self.prev_vel2)/(0.4108+0.7192+0.925+0.09)
-		# acc = (wt_vel - self.prev_wt_vel)/self.dt
-
-		velX = (x - self.prev_x)/self.dt
-
-		errX = np.asarray(XGoal - x)
-		derrX = XvelGoal - velX
-
-		# Get full Jacobian (Spatial?)
-		# J = get_end_effector_jacobian(self.state)
-		B = np.array([[1, 0, np.sin(x_orientation[1])] , [0, np.cos(x_orientation[0]), -np.cos(x_orientation[1]) * np.sin(x_orientation[0])] , [0, np.sin(x_orientation[0]), np.cos(x_orientation[1]) * np.cos(x_orientation[0])]])
-		transform_B = np.zeros((6,6))
-		transform_B[0:3,0:3] = np.eye(3)
-		transform_B[3:,3:] = np.linalg.inv(B)
-		dummy_J = get_6_jacobian(self.state)
-
-		J = np.concatenate((dummy_J[3:] , dummy_J[0:3])) # analytic Jacobian
-		# J_a = np.dot(transform_B, J)
-
-		# Jacobian 6x6:
-		J = J[:,:6]
-
-		# J_inv = np.linalg.pinv(J_a)
-		# J_inv = np.linalg.pinv(J)
-		# Jacobian inverse 6x6 (true inverse):
-		J_inv = np.linalg.inv(J)
-
-
-		# dJ = (J_a - self.prev_J)/self.dt# 0000****
-		dJ = (J - self.prev_J)/self.dt# 0000****
-
-		Mq = get_M(self.state)
-		# For 6x6 Jacobian:
-		Mq = Mq[:6,:6]
-
-		G = get_G(self.state)
-		# For 6x6 Jacobian:
-		G = G[:6]
-		C_qdot = get_C_qdot(self.state,vel)
-		# For 6x6 Jacobian:
-		C_qdot = C_qdot[:6]
-		# The problem is most probably here. One thing
-		# tau = np.dot(Mq,np.dot(J_inv,(XaccGoal - np.dot(dJ,vel)))) + np.dot(C_qdot,vel) + G + np.dot(np.transpose(J_a),(np.dot(Kd,(XvelGoal - velX)) + np.dot(Kp,(XGoal - x))))
-		# For 6x7 Jacobian
-		# tau = np.dot(Mq,np.dot(J_inv,(XaccGoal - np.dot(dJ,vel)))) + np.dot(C_qdot,vel) + G + np.dot(np.transpose(J),(np.dot(Kd,(XvelGoal - velX)) + np.dot(Kp,(XGoal - x))))
-
-		# For 6x6 Jacobian
-		tau = np.zeros(7)
-		tau[0:6] = np.dot(Mq,np.dot(J_inv,(XaccGoal - np.dot(dJ,vel)))) + np.dot(C_qdot,vel) + G + np.dot(np.transpose(J),(np.dot(Kd,(XvelGoal - velX)) + np.dot(Kp,(XGoal - x))))
-
-
-		# print "tau =", tau
-		print "x is =", x
-		# print "Err is = ", errX
-		print "X goal", XGoal
-		if tau[0] > 0.5:
-			tau[0] = 0.5
-		if tau[0] < -0.5:
-			tau[0] = -0.5
-
-		if tau[1] > 22:
-			tau[1] = 22
-		if tau[1] < -22:
-			tau[1] = -22
-
-		if tau[2] > 10:
-			tau[2] = 10
-		if tau[2] < -10:
-			tau[2] = -10
-
-		if tau[3] > 3:
-			tau[3] = 3
-		if tau[3] < -3:
-			tau[3] = -3
-
-		if tau[4] > 0.3:
-			tau[4] = 0.3
-		if tau[4] < -0.3:
-			tau[4] = -0.3
-
-		if tau[5] > 0.2:
-			tau[5] = 0.2
-		if tau[5] < -0.2:
-			tau[5] = -0.2
-
-		if tau[6] > 0.1:
-			tau[6] = 0.1
-		if tau[6] < -0.1:
-			tau[6] = -0.1
-
-		# print " Tau is :" , tau
-
-		self.cmd_msg.joint_cmds = [tau[0],tau[1],tau[2],tau[3],tau[4],tau[5],tau[6]]
-		self.pub.publish(self.cmd_msg)
-
-		self.prev_time = self.t
-		self.prev_state = self.state
-		self.prev_vel = vel
-		# self.prev_vel1 = self.prev_vel
-		# self.prev_vel2 = self.prev_vel1
-		# self.prev_vel3 = self.prev_vel2
-		# self.prev_vel4 = self.prev_vel3
-		# self.prev_wt_vel = wt_vel
-		self.prev_x = x
-		# self.prev_J = J_a
-		self.prev_J = J
-
-	def impedance_controller_new(self):
-
-		Kp = 1*np.eye(3) #Stiffness Matrix
-		Kp = np.diag([5,1,5])
-		# Kp[1][1] = 0
-		# Kp[2][2] = 0
-
-		Kd = 0.1*np.eye(3) # Damping Matrix
-		Md = 0.1*np.eye(3)
-
-		self.dt = self.t - self.prev_time
-		x = get_end_effector_pos(self.state)
-		print "x = ", x
-
-		traj = self.generate_trajectory(x)
-
-		# stateGoal = np.array([-0.08,-1.5, 0.07, -0.9, -2.07, 2.2, -0.8])
-		XGoal = traj[0]
-		XGoal[0] = -0.1
-		XGoal[2] = 0.6
-		XvelGoal = traj[1]
-		XaccGoal = 0*np.ones(3)
-
-		# while loop stuff here
-
-
-		vel = (self.state - self.prev_state)/self.dt
-		wt_vel = (0.925*vel + 0.7192*self.prev_vel + 0.4108*self.prev_vel1+0.09*self.prev_vel2)/(0.4108+0.7192+0.925+0.09)
-		acc = (wt_vel - self.prev_wt_vel)/self.dt
-
-		velX = (x - self.prev_x)/self.dt
-
-		errX = np.asarray(XGoal - x)
-		derrX = XvelGoal - velX
-
-		J = get_end_effector_jacobian(self.state)
-		J_inv = np.linalg.pinv(J)
-		dJ = (J - self.prev_J)/self.dt
-
-		Mq = get_M(self.state)
-
-		Mx = np.dot(np.dot(np.transpose(J_inv),Mq),J_inv)
-
-		# F = np.dot(np.dot(np.linalg.inv(Md), Mx),( np.dot(Kd, derrX) + np.dot(Kp, errX) ) )
-
-		G = get_G(self.state)
-		C_qdot = get_C_qdot(self.state,vel)
-		# G = inverse_dynamics(self.state, vel, acc)
-		tau = np.dot(Mq,np.dot(J_inv,(XaccGoal - np.dot(dJ,vel)))) + np.dot(C_qdot,vel) + G + np.dot(np.transpose(J),(np.dot(Kd,(XvelGoal - velX)) + np.dot(Kp,(XGoal - x))))
-
-		self.cmd_msg.joint_cmds = [tau[0],tau[1],tau[2],tau[3],tau[4],tau[5],tau[6]]
-		self.pub.publish(self.cmd_msg)
-
-		self.prev_time = self.t
-		self.prev_state = self.state
-		self.prev_vel = vel
-		self.prev_vel1 = self.prev_vel
-		self.prev_vel2 = self.prev_vel1
-		self.prev_vel3 = self.prev_vel2
-		self.prev_vel4 = self.prev_vel3
-		self.prev_wt_vel = wt_vel
-		self.prev_x = x
-		self.prev_J = J
-
 	def Hybrid_PD_Impedance(self):
 
 		#===========================================================================================================================================
 		Kp = 0.1*np.eye(3) #Stiffness Matrix
-		# Kp[1][1] = 0
+		Kp[1][1] = 0.01
 		# Kp[2][2] = 0
 
 		Kd = 0.0001*np.eye(3) # Damping Matrix
@@ -478,7 +243,7 @@ class KukaController:
 		NJoints_PD = 5 # tip, ball, two revolutes
 
 		# Initializing the gain values
-		K_PD = 1*np.eye(NJoints_PD)#10
+		K_PD = 1.0*np.eye(NJoints_PD)#10
 		D_PD = 0.07*np.eye(NJoints_PD)#0.7
 		# K_PD[1,1] = 0.01
 		# D_PD[1,1] = 0.0001
@@ -497,19 +262,28 @@ class KukaController:
 		if self.switch==0:
 			stateGoal_PD[0] = 0
 			stateGoal_PD[1] = np.pi/2
-			stateGoal_PD[3] = -stateGoal_PD[0]
+			# stateGoal_PD[3] = -stateGoal_PD[0]
+			stateGoal_PD[3] = 0
 		elif self.switch==1:
 			stateGoal_PD[1] = np.pi/2
 			stateGoal_PD[3] = -stateGoal_PD[0]
+
+			stateGoal_PD[3] = 0
 		elif self.switch==2:
 			stateGoal_PD[0] = np.pi/9
 			stateGoal_PD[3] = -self.state[1] + stateGoal_PD[1] - np.pi/2
+
+			stateGoal_PD[3] = np.pi/2
 		elif self.switch==3:
 			stateGoal_PD[1] = np.pi/3
 			stateGoal_PD[3] = stateGoal_PD[0]
+
+			stateGoal_PD[3] = 0
 		elif self.switch==4:
 			stateGoal_PD[0] = -np.pi/9
 			stateGoal_PD[3] = -self.state[1] + stateGoal_PD[1] - np.pi/2
+
+			stateGoal_PD[3] = 0
 
 		stateGoal_PD[2] = np.pi/2
 		stateGoal_PD[4] = 0

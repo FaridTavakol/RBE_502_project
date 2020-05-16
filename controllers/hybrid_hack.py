@@ -513,8 +513,8 @@ class KukaController:
 		# Initializing the gain values
 		K_PD = 1*np.eye(NJoints_PD)#10
 		D_PD = 0.07*np.eye(NJoints_PD)#0.7
-		K_PD[1,1] = 125
-		D_PD[1,1] = 0.1
+		# K_PD[1,1] = 0.
+		# D_PD[1,1] = 0.1
 		K_PD[2,2] = 0.01
 		D_PD[2,2] = 0.0001
 		K_PD[3,3] = 0.1
